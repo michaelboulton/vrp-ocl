@@ -712,7 +712,7 @@ namespace detail {
             exchange));
 #endif // !_WIN32
     }
-}; // namespace detail
+} // namespace detail
 
     
 /*!
@@ -3978,7 +3978,7 @@ inline cl_int enqueueReadBufferRect(
         host_offset,
         region,
         buffer_row_pitch,
-        host_slice_pitch,
+        buffer_slice_pitch,
         host_row_pitch,
         host_slice_pitch,
         ptr, 

@@ -146,7 +146,7 @@ int main
 
         cur_route << "1";
         for (ii = 0, jj = 1;
-        ii < result.second.size() - 1, jj < result.second.size();
+        ii < result.second.size() - 1 && jj < result.second.size();
         ii++, jj++)
         {
             cur_capacity +=

@@ -1,0 +1,391 @@
+#include "common_header.hpp"
+
+// creates a program and checks it works
+cl::Program OCLLearn::createProg
+(std::string const& filename, std::string const& options)
+{
+    cl::Program program;
+
+    std::ifstream source_file(filename.c_str());
+
+    std::basic_string<char> source_code(std::istreambuf_iterator<char>(source_file),
+        (std::istreambuf_iterator<char>()) );
+
+    cl::Program::Sources source(1, std::make_pair(source_code.c_str(), source_code.length()+1));
+    program = cl::Program(context, source);
+
+    std::stringstream errstream;
+    std::vector<cl::Device>::iterator dev_it;
+
+    try
+    {
+        program.build( devices, options.c_str() );
+        for(dev_it = devices.begin(); dev_it < devices.end(); dev_it++)
+        {
+            errstream << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(*dev_it);
+        }
+        std::string errs( errstream.str() );
+    }
+    catch(cl::Error e)
+    {
+        for(dev_it = devices.begin(); dev_it < devices.end(); dev_it++)
+        {
+            errstream << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(*dev_it);
+        }
+        std::string errs( errstream.str() );
+
+        //if(strstr(errs.c_str(), "error"))
+        {
+            std::cout << std::endl;
+            std::cout << errs;
+            std::cout << std::endl;
+            std::cout << "Exiting due to errors" << std::endl;
+            exit(1);
+        }
+    }
+
+    return program;
+}
+
+void OCLLearn::initOCL
+(void)
+{
+    std::vector<cl::Platform> platforms;
+    try
+    {
+        cl::Platform::get(&platforms);
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "error getting platform ids" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    std::string plat_info;
+    unsigned int ii;
+
+    #ifdef VERBOSE
+    std::cout << platforms.size() << " platforms";
+    std::cout << std::endl;
+    std::cout << "looking for devices of type ";
+    std::cout << (DT==CL_DEVICE_TYPE_CPU ? "CPU" : "GPU") << ": ";
+    std::cout << std::endl;
+    #endif
+
+    for(ii=0;ii<platforms.size();ii++)
+    {
+        try
+        {
+            platforms.at(ii).getInfo(CL_PLATFORM_NAME, &plat_info);
+            #ifdef VERBOSE
+            std::cout << plat_info << std::endl;
+            #endif
+
+            cl_context_properties properties[3] = {CL_CONTEXT_PLATFORM,
+                (cl_context_properties)(platforms.at(ii))(), 0};
+
+            context = cl::Context(DT, properties);
+            devices = context.getInfo<CL_CONTEXT_DEVICES>();
+
+            break;
+        }
+        catch(cl::Error e)
+        {
+            if (devices.size() < 1)
+            {
+                #ifdef VERBOSE
+                std::cout << " - invalid type" << std::endl;
+                #endif
+            }
+            else
+            {
+                std::cout << "\nError in creating context" << std::endl;
+                std::cout << e.what() << std::endl;
+                exit(1);
+            }
+        }
+    }
+
+    if(devices.size() > 1)
+    {
+        queue = cl::CommandQueue(context, devices.at(1));
+    }
+    else
+    {
+        queue = cl::CommandQueue(context, devices.at(0));
+    }
+
+    /****   options   *******/
+
+    std::stringstream options;
+    options << "-cl-fast-relaxed-math ";
+    options << "-cl-strict-aliasing ";
+    options << "-cl-mad-enable ";
+    options << "-cl-no-signed-zeros ";
+    //options << "-cl-opt-disable ";
+
+    // disable testing values
+    options << "-DNOTEST ";
+
+    // extra options
+    options << "-DNUM_PAIRS=" << CWS_pair_list.size() << " ";
+    options << "-DNUM_COORDS=" << node_coords.size() << " ";
+    options << "-DNUM_TRUCKS=" << NUM_TRUCKS * 2 << " ";
+    options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
+    options << "-DCAPACITY=" << capacity << " ";
+    options << "-DGROUP_SIZE=" << GROUP_SIZE << " ";
+    options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
+    options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
+    options << "-DK_OPT=" << tsp_strategy << " ";
+
+    // mutation rate
+    options << "-DMUT_RATE=" << mutrate << " ";
+
+    // which mutation to use
+    if (mutate_strategy == REVERSE)
+    {
+        #ifdef VERBOSE
+        std::cout << "Using random range reverse for mutation" << std::endl;
+        #endif
+        options << "-DMUT_REVERSE ";
+    }
+    else if (mutate_strategy == SWAP)
+    {
+        #ifdef VERBOSE
+        std::cout << "Using random range swap for mutation" << std::endl;
+        #endif
+        options << "-DMUT_SWAP ";
+    }
+
+    // compile it
+    all_program = createProg(KNL_FILE, options.str());
+
+    /****   buffers   *******/
+
+    // parents for ga
+    cl_buf_t chrom_buf(context,
+        CL_MEM_READ_WRITE,
+        all_chrom_size);
+    buffers["parents"] = chrom_buf;
+
+    // children of GA
+    cl_buf_t children_buf(context,
+        CL_MEM_READ_WRITE,
+        all_chrom_size);
+    buffers["children"] = children_buf;
+
+    // holds arrays of length NUM_TRUCKS corresponding to where sub routes begin and and in each route
+    cl_buf_t route_starts_buf(context,
+        CL_MEM_READ_WRITE,
+        // max 2 times original length
+        NUM_TRUCKS * 2 * GLOBAL_SIZE * sizeof(int));
+    buffers["starts"] = route_starts_buf;
+
+    // node coordinates
+    cl_buf_t node_coord_buf(context,
+        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+        sizeof(point_t) * node_coords.size(),
+        &node_coords.at(0));
+    queue.enqueueWriteBuffer(node_coord_buf, CL_TRUE, 0,
+        sizeof(point_t) * node_coords.size(),
+        &node_coords.at(0));
+    buffers["coords"] = node_coord_buf;
+
+    // demands for nodes
+    cl_buf_t node_demands_buf(context,
+        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+        sizeof(point_t) * node_demands.size(),
+        &node_demands.at(0));
+    queue.enqueueWriteBuffer(node_demands_buf, CL_TRUE, 0,
+        sizeof(point_t) * node_demands.size(),
+        &node_demands.at(0));
+    buffers["demands"] = node_demands_buf;
+
+    // length of route
+    cl_buf_t results_buf(context,
+        CL_MEM_READ_WRITE,
+        2 * sizeof(float) * GLOBAL_SIZE);
+    buffers["results"] = results_buf;
+
+    // output of bitonic sort kernel
+    cl_buf_t sorted_buf(context,
+        CL_MEM_READ_WRITE,
+        2 * all_chrom_size);
+    buffers["sorted"] = sorted_buf;
+
+    // hold state for random number generation
+    cl_buf_t rand_state_buf(context,
+        CL_MEM_READ_WRITE,
+        GLOBAL_SIZE * sizeof(cl_uint2));
+    // randomise seeds
+    std::vector<cl_uint2> rand_vec;
+    for(ii = 0; ii < GLOBAL_SIZE; ii++)
+    {
+        cl_uint2 randnum = {{rand(), rand()}};
+        rand_vec.push_back(randnum);
+    }
+    queue.enqueueWriteBuffer(rand_state_buf, CL_TRUE, 0,
+        GLOBAL_SIZE * sizeof(cl_uint2),
+        &rand_vec.at(0));
+    buffers["rand_state"] = rand_state_buf;
+
+    // test rand num
+    cl_buf_t rand_out_buf(context,
+        CL_MEM_READ_WRITE,
+        all_chrom_size * 2);
+    buffers["rand_out"] = rand_out_buf;
+
+    /****   kernels   *******/
+
+    // fitness kernel
+    try
+    {
+        fitness_kernel = cl_knl_t(all_program, "fitness");
+
+        fitness_kernel.setArg(0, buffers.at("parents"));
+        fitness_kernel.setArg(1, buffers.at("results"));
+        fitness_kernel.setArg(2, buffers.at("coords"));
+        fitness_kernel.setArg(3, buffers.at("demands"));
+        fitness_kernel.setArg(4, buffers.at("starts"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making fitness kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // TSP kernel
+    try
+    {
+        if(tsp_strategy == DJ)
+        {
+            TSP_kernel = cl_knl_t(all_program, "djikstra");
+        }
+        else if(tsp_strategy == SIMPLE)
+        {
+            TSP_kernel = cl_knl_t(all_program, "simpleTSP");
+        }
+        else if(tsp_strategy == NONE)
+        {
+            TSP_kernel = cl_knl_t(all_program, "noneTSP");
+        }
+        else
+        {
+            TSP_kernel = cl_knl_t(all_program, "kOpt");
+        }
+
+        TSP_kernel.setArg(0, buffers.at("parents"));
+        TSP_kernel.setArg(1, buffers.at("starts"));
+        TSP_kernel.setArg(2, buffers.at("coords"));
+        TSP_kernel.setArg(3, buffers.at("demands"));
+        TSP_kernel.setArg(4, buffers.at("rand_state"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making TSP kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // non elitist sorting kernel
+    try
+    {
+        ne_sort_kernel = cl_knl_t(all_program, "ParallelBitonic_NonElitist");
+
+        ne_sort_kernel.setArg(0, buffers.at("results"));
+        ne_sort_kernel.setArg(1, buffers.at("parents"));
+        ne_sort_kernel.setArg(2, buffers.at("sorted"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making sort kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // elitist sorting kernel
+    try
+    {
+        e_sort_kernel = cl_knl_t(all_program, "ParallelBitonic_Elitist");
+
+        e_sort_kernel.setArg(0, buffers.at("results"));
+        e_sort_kernel.setArg(1, buffers.at("parents"));
+        e_sort_kernel.setArg(2, buffers.at("children"));
+        e_sort_kernel.setArg(3, buffers.at("sorted"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making sort kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // breeding kernel
+    try
+    {
+        if(breed_strategy == PMX)
+        {
+            crossover_kernel = cl_knl_t(all_program, "pmx");
+            #ifdef VERBOSE
+            std::cout << "Using pmx crossover" << std::endl;
+            #endif
+        }
+        else if(breed_strategy == TWOPOINT)
+        {
+            crossover_kernel = cl_knl_t(all_program, "twoPointCrossover");
+            #ifdef VERBOSE
+            std::cout << "Using two point crossover" << std::endl;
+            #endif
+        }
+        else if(breed_strategy == CX)
+        {
+            crossover_kernel = cl_knl_t(all_program, "cx");
+            #ifdef VERBOSE
+            std::cout << "Using cx crossover" << std::endl;
+            #endif
+        }
+
+        crossover_kernel.setArg(0, buffers.at("parents"));
+        crossover_kernel.setArg(1, buffers.at("children"));
+        crossover_kernel.setArg(2, buffers.at("starts"));
+        crossover_kernel.setArg(3, buffers.at("results"));
+        crossover_kernel.setArg(4, buffers.at("coords"));
+        crossover_kernel.setArg(5, buffers.at("demands"));
+        crossover_kernel.setArg(6, buffers.at("rand_state"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making crossover kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // foreign exchange kernel
+    try
+    {
+        fe_kernel = cl_knl_t(all_program, "foreignExchange");
+
+        fe_kernel.setArg(0, buffers.at("parents"));
+        fe_kernel.setArg(1, buffers.at("rand_state"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making exchange kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
+    // sizes for workgroup
+    global = cl::NDRange(GLOBAL_SIZE);
+    local = cl::NDRange(GROUP_SIZE);
+}
+

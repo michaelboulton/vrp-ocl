@@ -10,7 +10,10 @@
 #include <numeric>
 #include <cmath>
 
+#define __CL_ENABLE_EXCEPTIONS
 #include "CL/cl.hpp"
+
+#define KNL_FILE "knl.cl"
 
 //typedef std::pair<int, int> point_t;
 // essentially the same thing
@@ -70,10 +73,10 @@ private:
     route_vec_t all_stops;
 
     // used for making initial routes
-    int capacity;
     point_vec_t node_coords;
     point_vec_t node_demands;
     point_info_vec_t CWS_pair_list;
+    int capacity;
 
     // opencl device type
     int DT;
@@ -112,7 +115,7 @@ private:
 
     void addNode
     (route_vec_t& route, route_vec_t const& total_route,
-    int& current_capacity, const unsigned int ii,
+    int& current_capacity,
     unsigned int pair_first, unsigned int pair_second);
 
     int nodesLeft
@@ -130,4 +133,40 @@ public:
     (RunInfo const& run_info, int dt);
 
 };
+
+// how to solve TSP
+enum {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
+const static int tsp_strategy = SIMPLE;
+// which mutation to use
+enum {REVERSE, SWAP};
+const static int mutate_strategy = SWAP;
+// mutation rate - out of 100%
+const static int mutrate = 25;
+// whether to be elitist or not
+enum {ELITIST, NONELITIST};
+const static int sort_strategy = ELITIST;
+// pmx or crossover
+enum {TWOPOINT, PMX, CX};
+const static int breed_strategy = CX;
+
+// now passed in in makefile
+// number of iterations
+// if k opt is 3, it will converge quicker, so doesnt need to run as long
+//const static unsigned int NUM_ITER = 100;
+// number of random runs to do - MAX 512
+//const static unsigned int GLOBAL_SIZE = 512;
+// size of workgroup
+//const static unsigned int GROUP_SIZE = 16;
+
+// number of trucks in route
+// 7 seems optimal
+const static unsigned int NUM_TRUCKS = 7;
+// max number of stops per route
+const static unsigned int STOPS_PER_ROUTE = 14;
+// min capacity before route making will give up
+const static int MIN_CAPACITY = 5;
+// % chance of taking a pair when making initial routes
+// too high and GA does nothing, too low and GA doesnt converge
+// 95 seems good - not deterministic, but produces good initial results
+const static int RAND_THRESHOLD = 80;
 
