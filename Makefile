@@ -23,7 +23,7 @@ $(OUTFILE): Makefile link
 link: $(FILES)
 	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDLIBS)
 
-%.o: %.cpp Makefile
+%.o: %.cpp Makefile common_header.hpp
 	$(CXX) $(CXXFLAGS) \
 	-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
 	-DCL_USE_DEPRECATED_OPENCL_1_1_APIS \

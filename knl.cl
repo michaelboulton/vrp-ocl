@@ -60,6 +60,7 @@ uint MWC64X(__global uint2* const state)
 float euclideanDistance
 (point_t first, point_t second)
 {
+    /*
     float x1, y1, x2, y2;
 
     x1 = first.first;
@@ -69,6 +70,12 @@ float euclideanDistance
 
     // native is a bit quicker?
     return native_sqrt(((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
+    */
+
+    const float2 a = (float2)(first.first,first.second);
+    const float2 b = (float2)(second.first,second.second);
+
+    return distance(a, b);
 }
 
 /*
@@ -162,9 +169,9 @@ int routeDemand
 }
 
 float totalRouteLength
-(__global const uint* const __restrict chromosome,
-__constant const point_t* const __restrict node_coords,
-__constant const point_t* const __restrict node_demands)
+(__global   const uint*    const __restrict chromosome,
+ __constant const point_t* const __restrict node_coords,
+ __constant const point_t* const __restrict node_demands)
 {
     uint ii;
     uint jj;
@@ -222,8 +229,8 @@ __constant const point_t* const __restrict node_demands)
 }
 
 float routeLength
-(__global const uint* const __restrict chromosome,
-__constant const point_t* const __restrict node_coords)
+(__global   const uint*    const __restrict chromosome,
+ __constant const point_t* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
@@ -239,11 +246,11 @@ __constant const point_t* const __restrict node_coords)
 }
 
 __kernel void fitness
-(__global const uint* __restrict chromosomes,
-__global float* const __restrict results,
-__constant const point_t* const __restrict node_coords,
-__constant const point_t* const __restrict node_demands,
-__global int* __restrict route_starts)
+(__global   const uint *         __restrict chromosomes,
+ __global         float *   const __restrict results,
+ __constant const point_t * const __restrict node_coords,
+ __constant const point_t * const __restrict node_demands,
+ __global         int *           __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
     const uint loc_id = get_local_id(0);
@@ -263,9 +270,9 @@ __global int* __restrict route_starts)
 */
 
 __kernel void ParallelBitonic_NonElitist
-(__global const float* __restrict route_lengths,
-__global const uint* __restrict chromosomes,
-__global uint* __restrict output)
+(__global const float * __restrict route_lengths,
+ __global const uint *  __restrict chromosomes,
+ __global       uint *  __restrict output)
 {
     int ii = get_local_id(0); // index in workgroup
     int group_id = get_group_id(0) ;
@@ -320,10 +327,10 @@ __global uint* __restrict output)
 }
 
 __kernel void ParallelBitonic_Elitist
-(__global const float* __restrict route_lengths,
-__global const uint* __restrict parents,
-__global const uint* __restrict children,
-__global uint* __restrict output)
+(__global const float * __restrict route_lengths,
+ __global const uint *  __restrict parents,
+ __global const uint *  __restrict children,
+ __global       uint *  __restrict output)
 {
     int ii = get_local_id(0); // index in workgroup
     int group_id = get_group_id(0) ;
@@ -397,23 +404,23 @@ __global uint* __restrict output)
 // dummy - do no TSP at all
 __kernel void noneTSP
 (__global uint* __restrict chromosomes,
-__global int* __restrict route_starts,
-__constant const point_t* const __restrict node_coords,
-__constant const point_t* const __restrict node_demands,
-__global uint2* const __restrict state)
+ __global int* __restrict route_starts,
+ __constant const point_t* const __restrict node_coords,
+ __constant const point_t* const __restrict node_demands,
+ __global uint2* const __restrict state)
 {
     ;
 }
 
 __kernel void cx
-(__global const uint* __restrict parents,
-__global uint* __restrict children,
-__global uint* __restrict route_lengths,
-__global int* __restrict route_starts,
-__constant point_t* const __restrict node_coords,
-__constant point_t* const __restrict node_demands,
-__global uint2* const __restrict state,
-unsigned int lower_bound, unsigned int upper_bound)
+(__global const uint*          __restrict parents,
+ __global       uint*          __restrict children,
+ __global       uint*          __restrict route_lengths,
+ __global       int *          __restrict route_starts,
+ __constant     point_t* const __restrict node_coords,
+ __constant     point_t* const __restrict node_demands,
+ __global       uint2*   const __restrict state,
+ unsigned int lower_bound, unsigned int upper_bound)
 {
     uint glob_id = get_global_id(0);
     uint group_id = get_group_id(0);
@@ -631,8 +638,8 @@ unsigned int lower_bound, unsigned int upper_bound)
 
 float subrouteLength
 (uint* const __restrict route,
-int route_stops,
-__constant point_t* const __restrict node_coords)
+ int route_stops,
+ __constant point_t* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
@@ -649,10 +656,10 @@ __constant point_t* const __restrict node_coords)
 
 __kernel void simpleTSP
 (__global uint* __restrict chromosomes,
-__global int* __restrict route_starts,
-__constant const point_t* const __restrict node_coords,
-__constant const point_t* const __restrict node_demands,
-__global uint2* const __restrict state)
+ __global int* __restrict route_starts,
+ __constant const point_t* const __restrict node_coords,
+ __constant const point_t* const __restrict node_demands,
+ __global uint2* const __restrict state)
 {
     uint glob_id = get_global_id(0);
     uint loc_id = get_local_id(0);
@@ -751,7 +758,7 @@ __global uint2* const __restrict state)
 
 __kernel void foreignExchange
 (__global uint* __restrict chromosomes,
-__global uint2* const __restrict state)
+ __global uint2* const __restrict state)
 {
     uint loc_id = get_local_id(0);
     uint group_id = get_group_id(0);

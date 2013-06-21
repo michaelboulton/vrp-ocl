@@ -60,12 +60,12 @@ class OCLLearn{
 
     typedef cl::Buffer cl_buf_t;
     typedef cl::Kernel cl_knl_t;
-    typedef cl::Image2D cl_img_t;
 
 private:
 
     cl::Context context;
     std::vector<cl::Device> devices;
+    cl::Device device;
     cl::CommandQueue queue;
     cl::Program all_program;
 
@@ -82,15 +82,12 @@ private:
     int DT;
 
     // kernels
-    cl_knl_t simple_swap_kernel;
     cl_knl_t fitness_kernel;
     cl_knl_t TSP_kernel;
-    cl_knl_t DJ_kernel;
     cl_knl_t e_sort_kernel;
     cl_knl_t ne_sort_kernel;
     cl_knl_t starts_kernel;
     cl_knl_t crossover_kernel;
-    cl_knl_t pmx_kernel;
     cl_knl_t fe_kernel;
 
     // size in bytes of all the chromosomes
@@ -148,15 +145,6 @@ const static int sort_strategy = ELITIST;
 // pmx or crossover
 enum {TWOPOINT, PMX, CX};
 const static int breed_strategy = CX;
-
-// now passed in in makefile
-// number of iterations
-// if k opt is 3, it will converge quicker, so doesnt need to run as long
-//const static unsigned int NUM_ITER = 100;
-// number of random runs to do - MAX 512
-//const static unsigned int GLOBAL_SIZE = 512;
-// size of workgroup
-//const static unsigned int GROUP_SIZE = 16;
 
 // number of trucks in route
 // 7 seems optimal

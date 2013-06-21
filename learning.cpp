@@ -15,7 +15,7 @@ float euclideanDistance
     return sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
 }
 
-// aggregate function for sorting points
+// function for sorting points
 bool sort_agg
 (point_info_t first, point_info_t second)
 {
@@ -26,27 +26,38 @@ bool sort_agg
 void RunInfo::parseInput
 (std::string const& settings_file)
 {
-    std::ifstream file_stream(settings_file.c_str(), std::ifstream::in);
     std::string file_line;
-
+    std::string sub;
     size_t str_return;
     size_t substr_pos;
-    std::string sub;
+    int x, y;
+    int depot, demand;
 
+    std::ifstream file_stream(settings_file.c_str(), std::ifstream::in);
+
+    if (!file_stream.is_open())
+    {
+        std::cout << "Could not open " << INPUT_FILE << std::endl;
+        exit(1);
+    }
+
+    // skip past the edge weight, dimension, etc
     do
     {
         std::getline(file_stream, file_line);
         str_return = file_line.find("CAPACITY");
     }
-    while(str_return == std::string::npos && file_stream.good());
+    while (str_return == std::string::npos && file_stream.good());
+
+    // Extract capacity
     substr_pos = file_line.find(" : ");
     sub = file_line.substr(substr_pos + 3);
     capacity = std::atoi(sub.c_str());
 
     std::getline(file_stream, file_line);
 
-    int x, y;
-    while(file_line.find("DEMAND") == std::string::npos && file_stream.good())
+    // read in node coordinates
+    while (file_line.find("DEMAND") == std::string::npos && file_stream.good())
     {
         std::getline(file_stream, file_line);
         std::istringstream stream(file_line);
@@ -64,7 +75,7 @@ void RunInfo::parseInput
     }
     node_coords.pop_back();
 
-    int depot, demand;
+    // read in demand for each node
     while(file_line.find("DEPOT") == std::string::npos && file_stream.good())
     {
         std::getline(file_stream, file_line);
@@ -81,11 +92,13 @@ void RunInfo::parseInput
     node_demands.pop_back();
 }
 
+// get the sorted list of all nodes
 void RunInfo::getSortedCWS
 (void)
 {
     unsigned int jj;
     unsigned int ii;
+
     for (ii = 1; ii < node_coords.size(); ii++)
     {
         for (jj = ii+1; jj < node_coords.size(); jj++)
@@ -108,20 +121,12 @@ RunInfo::RunInfo
     getSortedCWS();
 }
 
-int main
-(int argc, char* argv[])
+void printRoute
+(const RunInfo& r, const alg_result_t& result)
 {
-    RunInfo r(INPUT_FILE);
-
-    OCLLearn ocl_learner(r, OCL_TYPE);
-
-    alg_result_t result;
-
     // track routes
     std::stringstream best_route;
     float best_distance = 10000.0f;
-
-    result = ocl_learner.run();
 
     // auto find best solution in range
     uint max_cap, max_stops;
@@ -193,9 +198,22 @@ int main
         }
     }}
 
-    std::cout << "login mb8224" << std::endl;
     std::cout << "cost " << result.first << std::endl;
     std::cout << best_route.str();
+}
+
+int main
+(int argc, char* argv[])
+{
+    RunInfo r(INPUT_FILE);
+
+    OCLLearn ocl_learner(r, OCL_TYPE);
+
+    alg_result_t result;
+
+    result = ocl_learner.run();
+
+    printRoute(r, result);
 
     return 0;
 }

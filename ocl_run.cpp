@@ -1,6 +1,4 @@
-
 #include "common_header.hpp"
-
 #include "omp.h"
 
 float OCLLearn::getBestRoute
@@ -141,8 +139,6 @@ alg_result_t OCLLearn::run
     float best_route = std::numeric_limits<float>::max();
     route_vec_t best_chromosome = all_routes.back();
 
-    ii = 0;
-
     try
     {
         // TSP
@@ -153,10 +149,37 @@ alg_result_t OCLLearn::run
     }
     catch(cl::Error e)
     {
+        // if the work group size is invalid, its on AMD so 128 is the max wg size
         if(e.err() == -55)
         {
-            local = cl::NDRange(64);
-            doub_local = cl::NDRange(128);
+            // check to see what the maximum work group size is for all kernels
+            int max_sizes[7];
+            ii = 0;
+            #define CHECK_SIZE(knl, idx) \
+            cl::detail::errHandler( \
+                clGetKernelWorkGroupInfo(knl(), \
+                                         device(), \
+                                         CL_KERNEL_WORK_GROUP_SIZE, \
+                                         sizeof(size_t), \
+                                         &max_sizes[idx], \
+                                         NULL));
+
+            CHECK_SIZE(fitness_kernel, 0);
+            CHECK_SIZE(TSP_kernel, 1);
+            CHECK_SIZE(e_sort_kernel, 2);
+            CHECK_SIZE(ne_sort_kernel, 3);
+            CHECK_SIZE(starts_kernel, 4);
+            CHECK_SIZE(crossover_kernel, 5);
+            CHECK_SIZE(fe_kernel, 6);
+
+            int max_wg_sz = *std::max_element(max_sizes, max_sizes+7);
+
+            // set new local size
+            local = cl::NDRange(max_wg_sz/2);
+            doub_local = cl::NDRange(max_wg_sz);
+
+            std::cout << "Overriding work group size of " << GROUP_SIZE;
+            std::cout << " with work group size of " << max_wg_sz << std::endl;
         }
         else
         {
@@ -210,11 +233,11 @@ alg_result_t OCLLearn::run
         /*
         *   algo
         *   1.  do TSP on routes
-        *   2.  sort by fitness
+        *   2.  sort parents by fitness
         *   3.  breed
         *   4.  TSP
-        *   5.  sort by fitness
-        *   6.  copy best 1000 back into parents
+        *   5.  sort all by fitness, elitist or non elitist
+        *   6.  copy best back into parents, discard the rest
         *   7.  goto 2
         */
 

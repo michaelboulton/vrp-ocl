@@ -110,11 +110,13 @@ void OCLLearn::initOCL
 
     if(devices.size() > 1)
     {
-        queue = cl::CommandQueue(context, devices.at(1));
+        device = devices.at(1);
+        queue = cl::CommandQueue(context, device);
     }
     else
     {
-        queue = cl::CommandQueue(context, devices.at(0));
+        device = devices.at(0);
+        queue = cl::CommandQueue(context, device);
     }
 
     /****   options   *******/
