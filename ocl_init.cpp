@@ -1,3 +1,25 @@
+/*
+ *  Copyright (c) 2013 Michael Boulton
+ *  
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *  
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *  
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
 #include "common_header.hpp"
 
 // creates a program and checks it works
@@ -132,11 +154,11 @@ void OCLLearn::initOCL
     options << "-DNOTEST ";
 
     // extra options
-    options << "-DNUM_PAIRS=" << CWS_pair_list.size() << " ";
-    options << "-DNUM_COORDS=" << node_coords.size() << " ";
+    options << "-DNUM_PAIRS=" << info.CWS_pair_list.size() << " ";
+    options << "-DNUM_COORDS=" << info.node_coords.size() << " ";
     options << "-DNUM_TRUCKS=" << NUM_TRUCKS * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
-    options << "-DCAPACITY=" << capacity << " ";
+    options << "-DCAPACITY=" << info.capacity << " ";
     options << "-DGROUP_SIZE=" << GROUP_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
     options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
@@ -168,59 +190,61 @@ void OCLLearn::initOCL
 
     // parents for ga
     cl_buf_t chrom_buf(context,
-        CL_MEM_READ_WRITE,
-        all_chrom_size);
+                       CL_MEM_READ_WRITE,
+                       all_chrom_size);
     buffers["parents"] = chrom_buf;
 
     // children of GA
     cl_buf_t children_buf(context,
-        CL_MEM_READ_WRITE,
-        all_chrom_size);
+                          CL_MEM_READ_WRITE,
+                          all_chrom_size);
     buffers["children"] = children_buf;
 
     // holds arrays of length NUM_TRUCKS corresponding to where sub routes begin and and in each route
+    // max 2 times original length
     cl_buf_t route_starts_buf(context,
-        CL_MEM_READ_WRITE,
-        // max 2 times original length
-        NUM_TRUCKS * 2 * GLOBAL_SIZE * sizeof(int));
+                              CL_MEM_READ_WRITE,
+                              NUM_TRUCKS * 2 * GLOBAL_SIZE * sizeof(int));
     buffers["starts"] = route_starts_buf;
 
     // node coordinates
+    // FIXME need to recreate node coords how it was before
     cl_buf_t node_coord_buf(context,
-        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-        sizeof(point_t) * node_coords.size(),
-        &node_coords.at(0));
+                            CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                            sizeof(point_t) * info.node_coords.size(),
+                            &info.node_coords.at(info.depot_node));
     queue.enqueueWriteBuffer(node_coord_buf, CL_TRUE, 0,
-        sizeof(point_t) * node_coords.size(),
-        &node_coords.at(0));
+                             sizeof(point_t) * info.node_coords.size(),
+                             &info.node_coords.at(info.depot_node));
     buffers["coords"] = node_coord_buf;
 
     // demands for nodes
+    // FIXME need to recreate node demands how it was before
     cl_buf_t node_demands_buf(context,
-        CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-        sizeof(point_t) * node_demands.size(),
-        &node_demands.at(0));
+                              CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
+                              sizeof(point_t) * info.node_demands.size(),
+                              &info.node_demands.at(info.depot_node));
     queue.enqueueWriteBuffer(node_demands_buf, CL_TRUE, 0,
-        sizeof(point_t) * node_demands.size(),
-        &node_demands.at(0));
+                             sizeof(point_t) * info.node_demands.size(),
+                             &info.node_demands.at(info.depot_node));
     buffers["demands"] = node_demands_buf;
 
     // length of route
     cl_buf_t results_buf(context,
-        CL_MEM_READ_WRITE,
-        2 * sizeof(float) * GLOBAL_SIZE);
+                         CL_MEM_READ_WRITE,
+                         2 * sizeof(float) * GLOBAL_SIZE);
     buffers["results"] = results_buf;
 
     // output of bitonic sort kernel
     cl_buf_t sorted_buf(context,
-        CL_MEM_READ_WRITE,
-        2 * all_chrom_size);
+                        CL_MEM_READ_WRITE,
+                        2 * all_chrom_size);
     buffers["sorted"] = sorted_buf;
 
     // hold state for random number generation
     cl_buf_t rand_state_buf(context,
-        CL_MEM_READ_WRITE,
-        GLOBAL_SIZE * sizeof(cl_uint2));
+                            CL_MEM_READ_WRITE,
+                            GLOBAL_SIZE * sizeof(cl_uint2));
     // randomise seeds
     std::vector<cl_uint2> rand_vec;
     for(ii = 0; ii < GLOBAL_SIZE; ii++)
@@ -228,15 +252,16 @@ void OCLLearn::initOCL
         cl_uint2 randnum = {{rand(), rand()}};
         rand_vec.push_back(randnum);
     }
-    queue.enqueueWriteBuffer(rand_state_buf, CL_TRUE, 0,
-        GLOBAL_SIZE * sizeof(cl_uint2),
-        &rand_vec.at(0));
+    queue.enqueueWriteBuffer(rand_state_buf,
+                             CL_TRUE, 0,
+                             GLOBAL_SIZE * sizeof(cl_uint2),
+                             &rand_vec.at(0));
     buffers["rand_state"] = rand_state_buf;
 
     // test rand num
     cl_buf_t rand_out_buf(context,
-        CL_MEM_READ_WRITE,
-        all_chrom_size * 2);
+                          CL_MEM_READ_WRITE,
+                          all_chrom_size * 2);
     buffers["rand_out"] = rand_out_buf;
 
     /****   kernels   *******/
@@ -389,5 +414,24 @@ void OCLLearn::initOCL
     // sizes for workgroup
     global = cl::NDRange(GLOBAL_SIZE);
     local = cl::NDRange(GROUP_SIZE);
+}
+
+OCLLearn::OCLLearn
+(RunInfo const& run_info, int dt)
+:info(run_info), DT(dt),
+all_chrom_size((run_info.node_coords.size() - 1) * GLOBAL_SIZE * sizeof(int))
+{
+    srand(time(NULL));
+
+    initOCL();
+
+    all_stops = route_vec_t(run_info.node_coords.size(), 0);
+
+    // initialise 'best route' to be 0, 1, 2, 3, 4, ...
+    unsigned int ii;
+    for (ii = 0; ii < run_info.node_coords.size(); ii++)
+    {
+        all_stops.at(ii) = ii + 2;
+    }
 }
 

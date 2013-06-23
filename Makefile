@@ -1,5 +1,5 @@
-CXXFLAGS=-O2 -g -fopenmp -ansi -pedantic -Wall
-LDLIBS=-lgomp -lOpenCL
+CXXFLAGS=-O2 -g -ansi -pedantic -Wall
+LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
 TYPE=GPU

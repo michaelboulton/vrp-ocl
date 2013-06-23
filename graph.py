@@ -1,5 +1,25 @@
 #!/usr/bin/python
 
+#  Copyright (c) 2013 Michael Boulton
+#  
+#  Permission is hereby granted, free of charge, to any person obtaining a copy
+#  of this software and associated documentation files (the "Software"), to deal
+#  in the Software without restriction, including without limitation the rights
+#  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#  copies of the Software, and to permit persons to whom the Software is
+#  furnished to do so, subject to the following conditions:
+#  
+#  The above copyright notice and this permission notice shall be included in
+#  all copies or substantial portions of the Software.
+#  
+#  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+#  THE SOFTWARE.
+
 import matplotlib.pyplot as plt
 import numpy
 import re
@@ -43,8 +63,8 @@ def old_plot(best, split_best, demands, nodes, x, y):
         else:
             print
 
-        line_taken_x = [x[int(ii)] for ii in split_route]
-        line_taken_y = [y[int(ii)] for ii in split_route]
+        line_taken_x = [x[int(ii)-1] for ii in split_route]
+        line_taken_y = [y[int(ii)-1] for ii in split_route]
 
         colour = colours[split_best.index(route) % len(colours)]
         plt.plot(line_taken_x, line_taken_y, c=colour)
@@ -62,7 +82,7 @@ def new_plot(best, split_best, demands, nodes, x, y):
             whole_route.append(o)
 
     for x in whole_route:
-        if x == '0':
+        if x == '1':
             del whole_route[whole_route.index(x)]
 
     cur_cap = 0
@@ -74,7 +94,7 @@ def new_plot(best, split_best, demands, nodes, x, y):
     for max_cap in xrange(max([int(i) for i in demands])+10, 220):
         for rl in xrange(3, 20):
             cur_count = 0
-            new_route = "0 "
+            new_route = "1 "
             weird_route = "1->"
             while(1):
                 
@@ -89,13 +109,13 @@ def new_plot(best, split_best, demands, nodes, x, y):
 
                     # if max specs for subroute have been reached
                     if cur_cap > max_cap or stop_count >= rl:
-                        new_route += '0 '
+                        new_route += '1 '
                         weird_route += '1\n1->'
                         break
                     else:
                         new_route += (whole_route[ii])
                         new_route += (' ')
-                        weird_route += str(int(whole_route[ii])+1)
+                        weird_route += str(int(whole_route[ii]))
                         weird_route += '->'
                         cur_count += 1
                 if cur_count >= len(whole_route):
@@ -134,17 +154,17 @@ def plot(best_in, recurse):
                     y[icount] = line[2]
                     icount+=1
 
-    split_best = best.split(' 0 ')
+    split_best = best.split(' 1 ')
     # add depot to them
     for oo in split_best:
-        if not oo.startswith('0 '):
+        if not oo.startswith('1 '):
             ii = split_best.index(oo)
-            oo = '0 ' + oo
+            oo = '1 ' + oo
             split_best[ii] = oo
     for oo in split_best:
-        if not oo.endswith(' 0'):
+        if not oo.endswith(' 1'):
             ii = split_best.index(oo)
-            oo = oo + ' 0'
+            oo = oo + ' 1'
             split_best[ii] = oo
 
     demands = {}
@@ -159,7 +179,7 @@ def plot(best_in, recurse):
                 break
             else:
                 dem_line = line.split()
-                demands[str(int(dem_line[0])-1)] = dem_line[1]
+                demands[str(int(dem_line[0]))] = dem_line[1]
 
     nodes = {}
     # load nodes
@@ -172,10 +192,10 @@ def plot(best_in, recurse):
                 break
             else:
                 dem_line = line.split()
-                nodes[(int(dem_line[0])-1)] = int(dem_line[1]),int(dem_line[2])
+                nodes[(int(dem_line[0]))] = int(dem_line[1]),int(dem_line[2])
 
     if recurse:
-        new_best = best_in.lstrip('0 ').rstrip('0').rstrip(' ').split(' 0 ')
+        new_best = best_in.lstrip('1 ').rstrip('1').rstrip(' ').split(' 1 ')
         modified = new_plot(best, new_best, demands, nodes, x, y)
         plot(modified, False)
     else:
@@ -183,19 +203,20 @@ def plot(best_in, recurse):
         found = []
         # check to find duplicates or missing ones
         for i in best.split():
-            if not i=='0' and i in found:
+            if not i=='1' and i in found:
                 print i, "already in route - first at", best.split().index(i)
             found.append(i)
-        for i in xrange(76):
+        for i in xrange(1,76):
             if not str(i) in  best.split():
                 print i, "not found in route"
 
+        print split_best
         old_plot(best, split_best, demands, nodes, x, y)
         exit(1)
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
-        best_in = "52 27 13 54 19 35 8 46 34 67 4 51 3 44 32 9 39 72 58 12 40 17 45 29 57 15 5 47 61 28 22 62 2 33 63 23 56 41 64 42 43 1 73 75 30 48 37 20 70 60 71 36 69 21 74 26 7 53 14 59 11 66 65 38 10 31 55 25 50 18 24 49 16 6 68 "
+        best_in = "53 28 14 55 20 36 9 47 35 68 5 52 4 45 33 10 40 73 59 13 41 18 46 30 58 16 6 48 62 29 23 63 3 34 64 24 57 42 65 43 44 2 74 76 31 49 38 21 71 61 72 37 70 22 75 27 8 54 15 60 12 67 66 39 11 32 56 26 51 19 25 50 17 7 69 "
 
     else:
         best_in = ""
