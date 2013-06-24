@@ -4,7 +4,7 @@ LDLIBS=-lgomp -lOpenCL -lmpi
 # factors affecting how it runs
 TYPE=GPU
 NUM_ITER=1000
-GLOBAL_SIZE=4096
+GLOBAL_SIZE=2048
 GROUP_SIZE=512
 VERB=-DVERBOSE
 BLOCKING=-DBLOCK_CALLS
@@ -12,6 +12,7 @@ BLOCKING=-DBLOCK_CALLS
 FILES=\
 	ocl_init.o \
 	ocl_run.o \
+	tbb_cws.o \
 	learning.o \
 	cws.o
 

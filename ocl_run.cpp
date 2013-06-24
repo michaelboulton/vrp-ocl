@@ -128,6 +128,7 @@ alg_result_t OCLLearn::run
     std::vector<route_vec_t> all_routes;
 
     genChromosomes(all_routes);
+
     #if 0
     // can't randomise because number of trucks is not guarnateeable
     route_vec_t r(node_coords.size());

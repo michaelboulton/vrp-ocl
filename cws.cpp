@@ -21,7 +21,6 @@
  */
 
 #include "common_header.hpp"
-#include <stdexcept>
 
 // returns number of nodes not yet in the total route
 int OCLLearn::nodesLeft
@@ -156,7 +155,7 @@ void OCLLearn::genChromosomes
 
     // refs
     const point_info_vec_t& CWS_pair_list = info.CWS_pair_list;
-    const std::map<unsigned int, point_t>& node_coords = info.node_coords;
+    const node_map_t& node_coords = info.node_coords;
     const demand_vec_t& node_demands = info.node_demands;
 
     #ifdef VERBOSE
@@ -201,6 +200,7 @@ void OCLLearn::genChromosomes
             // and isn't the depot
             || pair_first == info.depot_node);
 
+            // FIXME TODO XXX just choose the pair, dont look for another second item (??? why did i do this)
             // go through all pairs, randomly choose one from near the top
             for (ii = 0; ii < CWS_pair_list.size(); ii++)
             {
@@ -213,6 +213,9 @@ void OCLLearn::genChromosomes
                     if (random() % 100 < rand_chance)
                     {
                         pair_second = CWS_pair_list.at(ii).second_index;
+                        //std::cout << euclideanDistance(node_coords.at(pair_first),
+                        //                               node_coords.at(pair_second));
+                        //std::cout << std::endl;
                         break;
                     }
                 }
@@ -224,6 +227,9 @@ void OCLLearn::genChromosomes
                     if (random() % 100 < rand_chance)
                     {
                         pair_second = CWS_pair_list.at(ii).first_index;
+                        //std::cout << euclideanDistance(node_coords.at(pair_first),
+                        //                               node_coords.at(pair_second));
+                        //std::cout << std::endl;
                         break;
                     }
                 }

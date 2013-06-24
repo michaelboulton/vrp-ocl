@@ -163,6 +163,8 @@ void OCLLearn::initOCL
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
     options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";
+    options << "-DDEPOT_NODE=" << info.depot_node << " ";
+    //options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
 
     // mutation rate
     options << "-DMUT_RATE=" << mutrate << " ";
@@ -182,6 +184,9 @@ void OCLLearn::initOCL
         #endif
         options << "-DMUT_SWAP ";
     }
+
+    std::cout << "options:" << std::endl;
+    std::cout << options.str() << std::endl;
 
     // compile it
     all_program = createProg(KNL_FILE, options.str());
@@ -207,26 +212,35 @@ void OCLLearn::initOCL
                               NUM_TRUCKS * 2 * GLOBAL_SIZE * sizeof(int));
     buffers["starts"] = route_starts_buf;
 
+    // start with size 1, corresponding to depot 0
+    point_vec_t dev_coords(1);
+    std::vector<cl_uint> dev_demands(1);
+
+    // FIXME hacky?
+    for (ii = 1; ii < info.node_coords.size()+1; ii++)
+    {
+        dev_coords.push_back(info.node_coords.at(ii));
+        dev_demands.push_back(info.node_demands.at(ii));
+    }
+
     // node coordinates
-    // FIXME need to recreate node coords how it was before
     cl_buf_t node_coord_buf(context,
                             CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                            sizeof(point_t) * info.node_coords.size(),
-                            &info.node_coords.at(info.depot_node));
+                            sizeof(point_t) * dev_coords.size(),
+                            &dev_coords.at(0));
     queue.enqueueWriteBuffer(node_coord_buf, CL_TRUE, 0,
-                             sizeof(point_t) * info.node_coords.size(),
-                             &info.node_coords.at(info.depot_node));
+                             sizeof(point_t) * dev_coords.size(),
+                             &dev_coords.at(0));
     buffers["coords"] = node_coord_buf;
 
     // demands for nodes
-    // FIXME need to recreate node demands how it was before
     cl_buf_t node_demands_buf(context,
                               CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR,
-                              sizeof(point_t) * info.node_demands.size(),
-                              &info.node_demands.at(info.depot_node));
+                              sizeof(cl_uint) * dev_demands.size(),
+                              &dev_demands.at(0));
     queue.enqueueWriteBuffer(node_demands_buf, CL_TRUE, 0,
-                             sizeof(point_t) * info.node_demands.size(),
-                             &info.node_demands.at(info.depot_node));
+                             sizeof(cl_uint) * dev_demands.size(),
+                             &dev_demands.at(0));
     buffers["demands"] = node_demands_buf;
 
     // length of route

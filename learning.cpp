@@ -187,9 +187,9 @@ void printRoute
         std::stringstream cur_route;
 
         // initial jaunt from depot to first node
-        total_distance += euclideanDistance(info.node_coords.at(0),
+        total_distance += euclideanDistance(info.node_coords.at(1),
                                             info.node_coords.at(route.at(0)));
-        cur_capacity += info.node_demands.at(route.at(0));
+        cur_capacity += info.node_demands.at(route.at(1));
 
         cur_route << "1";
         // for all the remaining nodes, go through and add
@@ -203,9 +203,9 @@ void printRoute
                 // add in a trip back to the depot and then to the next point
                 total_distance +=
                     euclideanDistance(info.node_coords.at(route.at(ii)),
-                                      info.node_coords.at(0));
+                                      info.node_coords.at(1));
                 total_distance +=
-                    euclideanDistance(info.node_coords.at(0),
+                    euclideanDistance(info.node_coords.at(1),
                                       info.node_coords.at(route.at(jj)));
 
                 // add to path
@@ -229,8 +229,8 @@ void printRoute
         }
         // add last trip from point to depot and finish route
         total_distance +=
-            euclideanDistance(info.node_coords.at(route.at(info.node_coords.size()-1)),
-                              info.node_coords.at(0));
+            euclideanDistance(info.node_coords.at(route.back()),
+                              info.node_coords.at(1));
 
         cur_route << "->1";
         cur_route << std::endl;

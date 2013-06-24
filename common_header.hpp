@@ -32,6 +32,11 @@
 #include <numeric>
 #include <cmath>
 
+#include "tbb/task_scheduler_init.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_do.h"
+#include "tbb/concurrent_vector.h"
+
 #define __CL_ENABLE_EXCEPTIONS
 #include "CL/cl.hpp"
 
@@ -65,7 +70,7 @@ typedef std::vector< unsigned int > route_vec_t;
 // combination of the length + the route
 typedef std::pair< float, route_vec_t > alg_result_t;
 // mapping the demand of each node
-typedef std::map< unsigned int, unsigned int > demand_vec_t;
+typedef std::map< cl_uint, cl_uint > demand_vec_t;
 // node coords 
 typedef std::map< unsigned int, point_t > node_map_t;
 
@@ -168,6 +173,32 @@ public:
 
 };
 
+class TBBRouteMaker
+{
+private:
+    const point_info_vec_t& CWS_pair_list;
+    const node_map_t& node_coords;
+    const demand_vec_t& node_demands;
+
+    //const RunInfo info;
+    //const route_vec_t all_stops;
+
+public:
+    TBBRouteMaker
+    (const point_info_vec_t& CWS_pair_list,
+     const node_map_t& node_coords,
+     const demand_vec_t& node_demands);
+
+    void addNode
+    (route_vec_t& route, route_vec_t& total_route,
+    unsigned int& current_capacity,
+    unsigned int pair_first, unsigned int pair_second) const;
+
+    void operator()
+    (route_vec_t& route) const;
+    //(const tbb::blocked_range<size_t>& r) const;
+};
+
 // how to solve TSP
 enum {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
 const static int tsp_strategy = SIMPLE;
@@ -193,4 +224,6 @@ const static unsigned int MIN_CAPACITY = 5;
 // too high and GA does nothing, too low and GA doesnt converge
 // 95 seems good - not deterministic, but produces good initial results
 const static unsigned int RAND_THRESHOLD = 95;
+// number of parents to consider in arena selection
+const static unsigned int ARENA_SIZE = 10;
 

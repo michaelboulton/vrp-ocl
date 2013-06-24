@@ -46,17 +46,6 @@ typedef struct point_info {
     float distance;
 } point_info_t ;
 
-typedef struct point {
-    int first;
-    int second;
-} point_t;
-
-typedef struct route {
-    uint* subroute;
-    float best_subroute_length, cur_subroute_length;
-    uint route_begin, route_end, length;
-} route_t;
-
 /*
  *  Random number generator
  *  source: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
@@ -80,7 +69,7 @@ uint MWC64X(__global uint2* const state)
  *  Returns euclidean distance between two points
  */
 float euclideanDistance
-(point_t first, point_t second)
+(uint2 first, uint2 second)
 {
     /*
     float x1, y1, x2, y2;
@@ -92,12 +81,12 @@ float euclideanDistance
 
     // native is a bit quicker?
     return native_sqrt(((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
+
+    const float2 a = (float2)(first.x, first.y);
+    const float2 b = (float2)(second.x, second.y);
     */
 
-    const float2 a = (float2)(first.first,first.second);
-    const float2 b = (float2)(second.first,second.second);
-
-    return distance(a, b);
+    return fast_distance(convert_float2(first), convert_float2(second));
 }
 
 /*
@@ -115,10 +104,10 @@ float euclideanDistance
  *  and 8-9.
  */
 void findRouteStarts
-(__global   const uint*          __restrict chromosomes,
- __constant const point_t* const __restrict node_coords,
- __constant const point_t* const __restrict node_demands,
- __global         int*           __restrict route_starts)
+(__global   const uint*        __restrict chromosomes,
+ __constant const uint2* const __restrict node_coords,
+ __constant const uint*  const __restrict node_demands,
+ __global         int*         __restrict route_starts)
 {
     uint group_id = get_group_id(0);
     uint loc_id = get_local_id(0);
@@ -137,7 +126,6 @@ void findRouteStarts
 
     // stuff currently in truck - 0 at first
     cur_capacity = 0;
-    //cur_capacity = node_demands[0].second; // XXX why was this initialised?
 
     for(ii = 0; ii < NUM_TRUCKS; ii++)
     {
@@ -155,13 +143,13 @@ void findRouteStarts
             if(ii >= ROUTE_STOPS) break;
         }
 
-        cur_capacity += node_demands[chromosomes[ii]].second;
+        cur_capacity += node_demands[chromosomes[ii]];
 
         // if adding the next node will go over capacity
         if(cur_capacity > CAPACITY || ++stops_taken >= MAX_PER_ROUTE)
         {
             stops_taken = 0;
-            cur_capacity = node_demands[chromosomes[ii]].second;
+            cur_capacity = node_demands[chromosomes[ii]];
 
             route_starts[++rr] = ii;
         }
@@ -175,25 +163,25 @@ void findRouteStarts
 /************************/
 
 int routeDemand
-(                 uint*    const __restrict route,
-                  uint                      route_length,
- __constant const point_t* const __restrict node_demands)
+(                 uint* const __restrict route,
+                  uint                   route_length,
+ __constant const uint* const __restrict node_demands)
 {
     uint total, ii;
     total = 0;
 
-    for(ii = 0; ii < route_length; ii++)
+    for (ii = 0; ii < route_length; ii++)
     {
-        total += node_demands[route[ii]].second;
+        total += node_demands[route[ii]];
     }
 
     return total;
 }
 
 float totalRouteLength
-(__global   const uint*    const __restrict chromosome,
- __constant const point_t* const __restrict node_coords,
- __constant const point_t* const __restrict node_demands)
+(__global   const uint*  const __restrict chromosome,
+ __constant const uint2* const __restrict node_coords,
+ __constant const uint*  const __restrict node_demands)
 {
     uint ii;
     uint jj;
@@ -203,12 +191,11 @@ float totalRouteLength
     float total_distance = 0.0f;
 
     // add distance to first node
-    total_distance += euclideanDistance(
-        node_coords[0],
-        node_coords[chromosome[0]]);
+    total_distance += euclideanDistance(node_coords[DEPOT_NODE],
+                                        node_coords[chromosome[0]]);
 
     // capaciy of first node
-    cur_capacity += node_demands[chromosome[0]].second;
+    cur_capacity += node_demands[chromosome[0]];
 
     // stops in current route
     uint stops_taken = 1;
@@ -217,7 +204,7 @@ float totalRouteLength
     ii < ROUTE_STOPS - 1 && jj < ROUTE_STOPS;
     ii++, jj++)
     {
-        cur_capacity += node_demands[chromosome[jj]].second;
+        cur_capacity += node_demands[chromosome[jj]];
 
         // if adding the next node will go over capacity
         // add distance to and from node
@@ -225,43 +212,38 @@ float totalRouteLength
         {
             stops_taken = 1;
 
-            total_distance += euclideanDistance(
-                node_coords[chromosome[ii]],
-                node_coords[0]);
-            total_distance += euclideanDistance(
-                node_coords[0],
-                node_coords[chromosome[jj]]);
+            total_distance += euclideanDistance(node_coords[chromosome[ii]],
+                                                node_coords[DEPOT_NODE]);
+            total_distance += euclideanDistance(node_coords[DEPOT_NODE],
+                                                node_coords[chromosome[jj]]);
 
-            cur_capacity = node_demands[chromosome[jj]].second;
+            cur_capacity = node_demands[chromosome[jj]];
         }
         else
         {
-            total_distance += euclideanDistance(
-                node_coords[chromosome[ii]],
-                node_coords[chromosome[jj]]);
+            total_distance += euclideanDistance(node_coords[chromosome[ii]],
+                                                node_coords[chromosome[jj]]);
         }
     }
 
     // add distance to last node
-    total_distance += euclideanDistance(
-        node_coords[chromosome[ROUTE_STOPS - 1]],
-        node_coords[0]);
+    total_distance += euclideanDistance(node_coords[chromosome[ROUTE_STOPS - 1]],
+                                        node_coords[DEPOT_NODE]);
 
     return total_distance;
 }
 
 float routeLength
-(__global   const uint*    const __restrict chromosome,
- __constant const point_t* const __restrict node_coords)
+(__global   const uint*  const __restrict chromosome,
+ __constant const uint2* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
 
     for(ii = 0; ii < ROUTE_STOPS; ii++)
     {
-        route_length += euclideanDistance(
-            node_coords[chromosome[ii]],
-            node_coords[chromosome[ii+1]]);
+        route_length += euclideanDistance(node_coords[chromosome[ii]],
+                                          node_coords[chromosome[ii + 1]]);
     }
 
     return route_length;
@@ -270,8 +252,8 @@ float routeLength
 __kernel void fitness
 (__global   const uint *         __restrict chromosomes,
  __global         float *   const __restrict results,
- __constant const point_t * const __restrict node_coords,
- __constant const point_t * const __restrict node_demands,
+ __constant const uint2 *   const __restrict node_coords,
+ __constant const uint*     const __restrict node_demands,
  __global         int *           __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
@@ -281,7 +263,9 @@ __kernel void fitness
     // offset to this work item
     chromosomes += GROUP_SIZE * group_id * ROUTE_STOPS + loc_id * ROUTE_STOPS;
 
-    results[glob_id] = totalRouteLength(chromosomes, node_coords, node_demands);
+    results[glob_id] = totalRouteLength(chromosomes,
+                                        node_coords,
+                                        node_demands);
 }
 
 /************************/
@@ -427,8 +411,8 @@ __kernel void ParallelBitonic_Elitist
 __kernel void noneTSP
 (__global uint* __restrict chromosomes,
  __global int* __restrict route_starts,
- __constant const point_t* const __restrict node_coords,
- __constant const point_t* const __restrict node_demands,
+ __constant const uint2* const __restrict node_coords,
+ __constant const uint*    const __restrict node_demands,
  __global uint2* const __restrict state)
 {
     ;
@@ -439,8 +423,8 @@ __kernel void cx
  __global       uint*          __restrict children,
  __global       uint*          __restrict route_lengths,
  __global       int *          __restrict route_starts,
- __constant     point_t* const __restrict node_coords,
- __constant     point_t* const __restrict node_demands,
+ __constant     uint2*   const __restrict node_coords,
+ __constant     uint*    const __restrict node_demands,
  __global       uint2*   const __restrict state,
  unsigned int lower_bound, unsigned int upper_bound)
 {
@@ -453,12 +437,26 @@ __kernel void cx
     parents += GROUP_SIZE * ROUTE_STOPS * group_id;
 
     // randomly choose
-    uint other_parent;
+    uint other_parent, counter=0, tmp_rand;
+
+    #ifdef ARENA_SIZE
+    // choose one of the top ones based on a random choice
+    do
+    {
+        other_parent = counter;
+        tmp_rand = MWC64X(&state[glob_id]) % ARENA_SIZE;
+    }
+    while (other_parent == loc_id
+    && counter++ < ARENA_SIZE
+    && tmp_rand > counter);
+    #else
+    // randomly choose
     do
     {
         other_parent = MWC64X(&state[glob_id]) % GROUP_SIZE;
     }
-    while(other_parent == loc_id);
+    while (other_parent == loc_id);
+    #endif
 
     // offset to this item
     __global const uint* parent_1 = parents + loc_id * ROUTE_STOPS;
@@ -467,9 +465,9 @@ __kernel void cx
     __global const uint* parent_2 = parents + other_parent * ROUTE_STOPS;
 
     // at the end, will hold array of numbers form 1-num cycles
-    char cycles[ROUTE_STOPS];
+    int cycles[ROUTE_STOPS];
     // to see which ones have been visited
-    char vis_mask[ROUTE_STOPS];
+    int vis_mask[ROUTE_STOPS];
 
     // reset
     for(jj = 0; jj < ROUTE_STOPS; jj++)
@@ -661,16 +659,15 @@ __kernel void cx
 float subrouteLength
 (uint* const __restrict route,
  int route_stops,
- __constant point_t* const __restrict node_coords)
+ __constant const uint2* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
 
     for(ii = 0; ii < route_stops; ii++)
     {
-        route_length += euclideanDistance(
-            node_coords[route[ii]],
-            node_coords[route[ii+1]]);
+        route_length += euclideanDistance(node_coords[route[ii]],
+                                          node_coords[route[ii + 1]]);
     }
 
     return route_length;
@@ -679,8 +676,8 @@ float subrouteLength
 __kernel void simpleTSP
 (__global uint* __restrict chromosomes,
  __global int* __restrict route_starts,
- __constant const point_t* const __restrict node_coords,
- __constant const point_t* const __restrict node_demands,
+ __constant const uint2* const __restrict node_coords,
+ __constant const uint*    const __restrict node_demands,
  __global uint2* const __restrict state)
 {
     uint glob_id = get_global_id(0);
@@ -690,7 +687,10 @@ __kernel void simpleTSP
     // counters
     uint ii, jj, kk, oo;
 
-    findRouteStarts(chromosomes, node_coords, node_demands, route_starts);
+    findRouteStarts(chromosomes,
+                    node_coords,
+                    node_demands,
+                    route_starts);
 
     // offset
     chromosomes += GROUP_SIZE * group_id * ROUTE_STOPS + loc_id * ROUTE_STOPS;
@@ -722,7 +722,7 @@ __kernel void simpleTSP
         uint* const current_subroute = chromosome + route_begin;
 
         uint route_end;
-        if(ii < num_routes - 1)
+        if (ii < num_routes - 1)
         {
             route_end = route_starts[ii + 1];
         }
