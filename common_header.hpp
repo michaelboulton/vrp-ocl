@@ -32,10 +32,8 @@
 #include <numeric>
 #include <cmath>
 
-#include "tbb/task_scheduler_init.h"
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_do.h"
-#include "tbb/concurrent_vector.h"
+// GNU extension for getting options - ok?
+#include <getopt.h>
 
 #define __CL_ENABLE_EXCEPTIONS
 #include "CL/cl.hpp"
@@ -50,8 +48,6 @@ class OCLLearn;
 typedef struct point {
     int first;
     int second;
-    point(int f, int s):first(f),second(s){}
-    point(void){}
 } point_t;
 
 // index of 2 points and the distance between them
@@ -173,6 +169,13 @@ public:
 
 };
 
+#if 0
+#include "tbb/task_scheduler_init.h"
+#include "tbb/blocked_range.h"
+#include "tbb/parallel_do.h"
+#include "tbb/concurrent_vector.h"
+#endif
+
 class TBBRouteMaker
 {
 private:
@@ -201,29 +204,32 @@ public:
 
 // how to solve TSP
 enum {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
-const static int tsp_strategy = SIMPLE;
+static int tsp_strategy = SIMPLE;
 // which mutation to use
 enum {REVERSE, SWAP};
-const static int mutate_strategy = SWAP;
+static int mutate_strategy = SWAP;
 // mutation rate - out of 100%
-const static int mutrate = 25;
+static int mutrate = 25;
 // whether to be elitist or not
 enum {ELITIST, NONELITIST};
-const static int sort_strategy = ELITIST;
+static int sort_strategy = NONELITIST;
 // pmx or crossover
 enum {TWOPOINT, PMX, CX};
-const static int breed_strategy = CX;
+static int breed_strategy = CX;
 
 // number of trucks in whole route - 7 or 8
-const static unsigned int NUM_TRUCKS = 7;
+static unsigned int NUM_TRUCKS = 7;
 // max number of stops per route
-const static unsigned int STOPS_PER_ROUTE = 15;
+static unsigned int STOPS_PER_ROUTE = 15;
 // min capacity before route making will give up
-const static unsigned int MIN_CAPACITY = 5;
+static unsigned int MIN_CAPACITY = 5;
 // % chance of taking a pair when making initial routes
 // too high and GA does nothing, too low and GA doesnt converge
 // 95 seems good - not deterministic, but produces good initial results
-const static unsigned int RAND_THRESHOLD = 95;
+static unsigned int RAND_THRESHOLD = 95;
 // number of parents to consider in arena selection
-const static unsigned int ARENA_SIZE = 10;
+static unsigned int ARENA_SIZE = 10;
+
+// whether to print everything out
+static unsigned int VERBOSE_OUTPUT = 0;
 

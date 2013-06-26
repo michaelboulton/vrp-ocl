@@ -40,15 +40,17 @@ float OCLLearn::getBestRoute
     {
         queue.finish();
 
-        fitness_kernel.setArg(0, buffers.at("parents"));
-        queue.enqueueNDRangeKernel(fitness_kernel,
-            cl::NullRange, global, local);
+        //fitness_kernel.setArg(0, buffers.at("parents"));
+        //queue.enqueueNDRangeKernel(fitness_kernel,
+        //                           cl::NullRange,
+        //                           global,
+        //                           local);
 
         queue.finish();
     }
     catch(cl::Error e)
     {
-        std::cout << "\nError in fitness kernel" << std::endl;
+        std::cout << "\nError in evaluating for copying back" << std::endl;
         std::cout << e.what() << std::endl;
         std::cout << e.err() << std::endl;
         throw e;
@@ -57,9 +59,9 @@ float OCLLearn::getBestRoute
     try
     {
         queue.enqueueReadBuffer(buffers.at("results"),
-            CL_TRUE, 0,
-            sizeof(float) * GLOBAL_SIZE,
-            results_host);
+                                CL_TRUE, 0,
+                                sizeof(float) * GLOBAL_SIZE,
+                                results_host);
 
         queue.finish();
     }
@@ -74,7 +76,7 @@ float OCLLearn::getBestRoute
     // print out best route + length of it
     // could do on device for improved speed
     min_route = std::min_element(results_host,
-        results_host + results_size);
+                                 results_host + results_size);
 
     if(*min_route < best_route)
     {
@@ -85,12 +87,12 @@ float OCLLearn::getBestRoute
         uint load_from = min_route - results_host;
 
         queue.enqueueReadBuffer(buffers.at("parents"), CL_TRUE,
-            // position in chromosome
-            load_from
-            // size of 1 chromosome
-            * (all_chrom_size / GLOBAL_SIZE),
-            (all_chrom_size / GLOBAL_SIZE),
-            &best_chromosome.at(0));
+                                // position in chromosome
+                                load_from *
+                                // size of 1 chromosome
+                                (all_chrom_size / GLOBAL_SIZE),
+                                (all_chrom_size / GLOBAL_SIZE),
+                                &best_chromosome.at(0));
 
         #ifdef VERBOSE
         std::cout << std::endl;
@@ -108,7 +110,8 @@ float OCLLearn::getBestRoute
     }
 
     avg = std::accumulate(results_host,
-        results_host + results_size, 0.0f)/(results_size);
+                          results_host + results_size,
+                          0.0f) / results_size;
 
     return avg;
 }
@@ -178,7 +181,6 @@ alg_result_t OCLLearn::run
         {
             // check to see what the maximum work group size is for all kernels
             int max_sizes[7];
-            ii = 0;
             #define CHECK_SIZE(knl, idx) \
             cl::detail::errHandler( \
                 clGetKernelWorkGroupInfo(knl(), \
@@ -220,23 +222,28 @@ alg_result_t OCLLearn::run
         // TSP
         TSP_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(TSP_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // fitness
         fitness_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(fitness_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // sort - always do no elitist on first round
         ne_sort_kernel.setArg(1, buffers.at("parents"));
         queue.enqueueNDRangeKernel(ne_sort_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // set the top GLOBAL_SIZE to be the next parents
-        queue.enqueueCopyBuffer(
-            buffers.at("sorted"),
-            buffers.at("parents"),
-            0, 0, all_chrom_size);
+        queue.enqueueCopyBuffer(buffers.at("sorted"),
+                                buffers.at("parents"),
+                                0, 0, all_chrom_size);
     }
     catch(cl::Error e)
     {
@@ -272,7 +279,9 @@ alg_result_t OCLLearn::run
         {
             // swap best chromosome in each workgroup with another one
             queue.enqueueNDRangeKernel(fe_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -304,7 +313,9 @@ alg_result_t OCLLearn::run
             crossover_kernel.setArg(7, lb);
             crossover_kernel.setArg(8, ub);
             queue.enqueueNDRangeKernel(crossover_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -322,7 +333,9 @@ alg_result_t OCLLearn::run
             // TSP
             TSP_kernel.setArg(0, buffers.at("children"));
             queue.enqueueNDRangeKernel(TSP_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -339,7 +352,9 @@ alg_result_t OCLLearn::run
         {
             fitness_kernel.setArg(0, buffers.at("children"));
             queue.enqueueNDRangeKernel(fitness_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -363,24 +378,29 @@ alg_result_t OCLLearn::run
                 // second half of results contains
                 fitness_kernel.setArg(0, buffers.at("parents"));
                 queue.enqueueNDRangeKernel(fitness_kernel,
-                    fitness_offset, global, local);
+                                           fitness_offset,
+                                           global,
+                                           local);
 
                 // needs doulbe the local range for sorting
                 queue.enqueueNDRangeKernel(e_sort_kernel,
-                    cl::NullRange, doub_global, doub_local);
+                                           cl::NullRange,
+                                           doub_global,
+                                           doub_local);
             }
             else
             {
                 ne_sort_kernel.setArg(1, buffers.at("children"));
                 queue.enqueueNDRangeKernel(ne_sort_kernel,
-                    cl::NullRange, global, local);
+                                           cl::NullRange,
+                                           global,
+                                           local);
             }
 
             // set the top GLOBAL_SIZE to be the next parents
-            queue.enqueueCopyBuffer(
-                buffers.at("sorted"),
-                buffers.at("parents"),
-                0, 0, all_chrom_size);
+            queue.enqueueCopyBuffer(buffers.at("sorted"),
+                                    buffers.at("parents"),
+                                    0, 0, all_chrom_size);
         }
         catch(cl::Error e)
         {

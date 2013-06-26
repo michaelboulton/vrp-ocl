@@ -200,7 +200,6 @@ void OCLLearn::genChromosomes
             // and isn't the depot
             || pair_first == info.depot_node);
 
-            // FIXME TODO XXX just choose the pair, dont look for another second item (??? why did i do this)
             // go through all pairs, randomly choose one from near the top
             for (ii = 0; ii < CWS_pair_list.size(); ii++)
             {

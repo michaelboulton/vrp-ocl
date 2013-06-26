@@ -90,6 +90,26 @@ float euclideanDistance
 }
 
 /*
+ *  Returns how long a subroute is
+ */
+float subrouteLength
+(uint* const __restrict route,
+ int route_stops,
+ __constant const uint2* const __restrict node_coords)
+{
+    uint ii;
+    float route_length = 0.0f;
+
+    for(ii = 0; ii < route_stops; ii++)
+    {
+        route_length += euclideanDistance(node_coords[route[ii]],
+                                          node_coords[route[ii + 1]]);
+    }
+
+    return route_length;
+}
+
+/*
  *  Takes global pointers to chromosomes, node coordinates, node demands, and a
  *  pointer to route_starts which is global storage holding the positions in
  *  each chromosome where the beginning of the mini subroutes start.
@@ -137,7 +157,7 @@ void findRouteStarts
     for(ii = 0; ii < ROUTE_STOPS; ii++)
     {
         // ignore depot stops - go back to depot when its full / too many things in route
-        while(chromosomes[ii] == 0)
+        while(chromosomes[ii] == 1)
         {
             ii++;
             if(ii >= ROUTE_STOPS) break;
@@ -159,8 +179,6 @@ void findRouteStarts
     // route_starts[1] always contains 0 - the start of the first route
     route_starts[0] = rr;
 }
-
-/************************/
 
 int routeDemand
 (                 uint* const __restrict route,
@@ -190,11 +208,9 @@ float totalRouteLength
     // for calculating length of route
     float total_distance = 0.0f;
 
-    // add distance to first node
+    // add distance and capacity for first node
     total_distance += euclideanDistance(node_coords[DEPOT_NODE],
                                         node_coords[chromosome[0]]);
-
-    // capaciy of first node
     cur_capacity += node_demands[chromosome[0]];
 
     // stops in current route
@@ -207,16 +223,16 @@ float totalRouteLength
         cur_capacity += node_demands[chromosome[jj]];
 
         // if adding the next node will go over capacity
-        // add distance to and from node
         if(cur_capacity > CAPACITY || ++stops_taken >= MAX_PER_ROUTE)
         {
-            stops_taken = 1;
-
+            // add distance to and from depot
             total_distance += euclideanDistance(node_coords[chromosome[ii]],
                                                 node_coords[DEPOT_NODE]);
             total_distance += euclideanDistance(node_coords[DEPOT_NODE],
                                                 node_coords[chromosome[jj]]);
 
+            // reset
+            stops_taken = 1;
             cur_capacity = node_demands[chromosome[jj]];
         }
         else
@@ -249,8 +265,10 @@ float routeLength
     return route_length;
 }
 
+/************************/
+
 __kernel void fitness
-(__global   const uint *         __restrict chromosomes,
+(__global   const uint *          __restrict chromosomes,
  __global         float *   const __restrict results,
  __constant const uint2 *   const __restrict node_coords,
  __constant const uint*     const __restrict node_demands,
@@ -267,8 +285,6 @@ __kernel void fitness
                                         node_coords,
                                         node_demands);
 }
-
-/************************/
 
 /*
 *   Modified version of bitonic sort
@@ -405,8 +421,6 @@ __kernel void ParallelBitonic_Elitist
     }
 }
 
-/**************************************/
-
 // dummy - do no TSP at all
 __kernel void noneTSP
 (__global uint* __restrict chromosomes,
@@ -437,7 +451,7 @@ __kernel void cx
     parents += GROUP_SIZE * ROUTE_STOPS * group_id;
 
     // randomly choose
-    uint other_parent, counter=0, tmp_rand;
+    uint other_parent, counter = 0, tmp_rand;
 
     #ifdef ARENA_SIZE
     // choose one of the top ones based on a random choice
@@ -656,23 +670,6 @@ __kernel void cx
 
 /************************/
 
-float subrouteLength
-(uint* const __restrict route,
- int route_stops,
- __constant const uint2* const __restrict node_coords)
-{
-    uint ii;
-    float route_length = 0.0f;
-
-    for(ii = 0; ii < route_stops; ii++)
-    {
-        route_length += euclideanDistance(node_coords[route[ii]],
-                                          node_coords[route[ii + 1]]);
-    }
-
-    return route_length;
-}
-
 __kernel void simpleTSP
 (__global uint* __restrict chromosomes,
  __global int* __restrict route_starts,
@@ -778,6 +775,7 @@ __kernel void simpleTSP
 
 /************************/
 
+// TODO this can probly be improved
 __kernel void foreignExchange
 (__global uint* __restrict chromosomes,
  __global uint2* const __restrict state)

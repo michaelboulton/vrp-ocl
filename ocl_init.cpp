@@ -164,7 +164,7 @@ void OCLLearn::initOCL
     options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";
     options << "-DDEPOT_NODE=" << info.depot_node << " ";
-    //options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
+    options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
 
     // mutation rate
     options << "-DMUT_RATE=" << mutrate << " ";

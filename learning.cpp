@@ -94,7 +94,7 @@ void RunInfo::parseInput
         x = atoi(sub.c_str());
         stream >> sub;
         y = atoi(sub.c_str());
-        point_t coord(x, y);
+        point_t coord = {x, y};
 
         node_coords[depot] = coord;
     }
@@ -330,6 +330,18 @@ void printRoute
     std::cout << best_route.str();
 }
 #endif
+
+void parseArgs
+(int argc, char* argv[])
+{
+    //getopt_long();
+    //static struct option long_options =
+    //{
+    //    {"verbose", no_argument, &VERBOSE_OUTPUT, 1},
+    //    {"num_trucks", required_argument, 0, 'n'},
+    //    {0, 0, 0, 0}
+    //};
+}
 
 int main
 (int argc, char* argv[])

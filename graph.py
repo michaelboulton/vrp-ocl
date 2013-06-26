@@ -43,6 +43,9 @@ def length(best, nodes):
     return total
 
 def old_plot(best, split_best, demands, nodes, x, y):
+    total = length(best, nodes)
+    print "Total length", total
+
     fig=plt.figure()
     data = fig.add_subplot(111)
     data.scatter(x,y, marker='x', c='k')
@@ -69,9 +72,6 @@ def old_plot(best, split_best, demands, nodes, x, y):
         colour = colours[split_best.index(route) % len(colours)]
         plt.plot(line_taken_x, line_taken_y, c=colour)
 
-    total = length(best, nodes)
-
-    print "Total length", total
     plt.show()
 
 def new_plot(best, split_best, demands, nodes, x, y):

@@ -1,11 +1,11 @@
-CXXFLAGS=-O2 -g -ansi -pedantic -Wall
+CXXFLAGS=-O2 -g -ansi -pedantic -Wall -Wno-unused-variable
 LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
 TYPE=GPU
 NUM_ITER=1000
-GLOBAL_SIZE=2048
-GROUP_SIZE=512
+GLOBAL_SIZE=512
+GROUP_SIZE=64
 VERB=-DVERBOSE
 BLOCKING=-DBLOCK_CALLS
 
