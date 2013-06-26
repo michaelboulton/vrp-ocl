@@ -2,12 +2,17 @@ CXXFLAGS=-O2 -g -ansi -pedantic -Wall -Wno-unused-variable
 LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
-TYPE=GPU
-NUM_ITER=1000
-GLOBAL_SIZE=512
-GROUP_SIZE=64
+#TYPE=GPU
+#NUM_ITER=1000
+#GLOBAL_SIZE=512
+#GROUP_SIZE=64
 VERB=-DVERBOSE
 BLOCKING=-DBLOCK_CALLS
+
+#-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
+-DNUM_ITER=$(NUM_ITER) \
+-DGLOBAL_SIZE=$(GLOBAL_SIZE) \
+-DGROUP_SIZE=$(GROUP_SIZE) \
 
 FILES=\
 	ocl_init.o \
@@ -16,7 +21,7 @@ FILES=\
 	learning.o \
 	cws.o
 
-OUTFILE=out.exe
+OUTFILE=vrp-ocl
 
 # make gpu by default
 $(OUTFILE): Makefile link
@@ -26,11 +31,7 @@ link: $(FILES)
 
 %.o: %.cpp Makefile common_header.hpp
 	$(CXX) $(CXXFLAGS) \
-	-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
 	-DCL_USE_DEPRECATED_OPENCL_1_1_APIS \
-	-DNUM_ITER=$(NUM_ITER) \
-	-DGLOBAL_SIZE=$(GLOBAL_SIZE) \
-	-DGROUP_SIZE=$(GROUP_SIZE) \
 	$(VERB) \
 	-c $<
 

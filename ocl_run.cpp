@@ -122,7 +122,7 @@ alg_result_t OCLLearn::run
     unsigned int ii, lb, ub;
     double t_0, t_1;
 
-    cl::NDRange doub_local(GROUP_SIZE * 2);
+    cl::NDRange doub_local(LOCAL_SIZE * 2);
     cl::NDRange doub_global(GLOBAL_SIZE * 2);
 
     t_0 = MPI_Wtime();
@@ -204,7 +204,7 @@ alg_result_t OCLLearn::run
             local = cl::NDRange(max_wg_sz/2);
             doub_local = cl::NDRange(max_wg_sz);
 
-            std::cout << "Overriding work group size of " << GROUP_SIZE;
+            std::cout << "Overriding work group size of " << LOCAL_SIZE;
             std::cout << " with work group size of " << max_wg_sz << std::endl;
         }
         else
@@ -255,11 +255,11 @@ alg_result_t OCLLearn::run
 
     /********************/
 
-    for(ii = 1; ii < NUM_ITER + 1; ii++)
+    for(ii = 1; ii < GENERATIONS + 1; ii++)
     {
         #ifdef VERBOSE
         std::cout << "\rNow on iteration " << ii << "/";
-        std::cout << NUM_ITER << " " << std::flush;
+        std::cout << GENERATIONS << " " << std::flush;
         #endif
         /*
         *   algo

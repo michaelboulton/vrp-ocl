@@ -334,24 +334,146 @@ void printRoute
 void parseArgs
 (int argc, char* argv[])
 {
-    //getopt_long();
-    //static struct option long_options =
-    //{
-    //    {"verbose", no_argument, &VERBOSE_OUTPUT, 1},
-    //    {"num_trucks", required_argument, 0, 'n'},
-    //    {0, 0, 0, 0}
-    //};
+    // option specifiers for getopt_long
+    static struct option long_options[] =
+    {
+        {"arena_size", required_argument, 0, 'a'},
+        {"min_capacity", required_argument, 0, 'c'},
+        {"per_generation", required_argument, 0, 'g'},
+        {"help", no_argument, 0, 'h'},
+        {"iterations", required_argument, 0, 'i'},
+        {"num_trucks", required_argument, 0, 'n'},
+        {"mutstrat", required_argument, 0, 'm'},
+        {"per_population", required_argument, 0, 'p'},
+        {"mutrate", required_argument, 0, 'r'},
+        {"stops_per_route", required_argument, 0, 's'},
+        {"verbose", no_argument, 0, 'v'},
+        {0, 0, 0, 0}
+    };
+
+    // help strings corresponding to each option - keep in same order!
+    static const char* help_strings[] = 
+    {
+        "Arena size - size of arena to do arena selection",
+        "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
+        "Total size - how many chromosomes in total in all populations",
+        "Print help",
+        "Iterations - number of generations to go through",
+        "Number of trucks - number of subroutes in a total route to create routes for",
+        "Mutation strategy - what kind of mutation strategy to use. Either SWAP or REVERSE",
+        "Population size - size per population in the total number of populations",
+        "Mutation rate - percentage chance of a chromosome being mutated",
+        "Stops per route - number of stops before route creation will go back to depot",
+        "Verbose mode"
+    };
+
+    int option_index, c;
+    long int converted;
+    int ii = 0;
+
+    #define CONV_CHECK(arg_name)                            \
+        if (1 > (converted = strtol(optarg, NULL, 10)))     \
+        {                                                   \
+            fprintf(stderr,                                 \
+                    "Invalid argument %ld passed to %s\n",  \
+                    converted, #arg_name);                  \
+            exit(1);                                        \
+        }
+
+    while(1)
+    {
+        if (-1 == (c = getopt_long(argc, argv, "hva:g:i:n:p:",
+                                   long_options, &option_index)))
+        {
+            break;
+        }
+
+        switch (c)
+        {
+        case 0:
+            if (0 != long_options[option_index].flag)
+            {
+                fprintf(stdout, "Got %s\n", long_options[option_index].name);
+            }
+            break;
+
+        case 'a':
+            CONV_CHECK(-a);
+            ARENA_SIZE = converted;
+            break;
+
+        case 'g':
+            CONV_CHECK(-g);
+            GLOBAL_SIZE = converted;
+            break;
+
+        case 'i':
+            CONV_CHECK(-i);
+            GENERATIONS = converted;
+            break;
+
+        case 'n':
+            CONV_CHECK(-c);
+            NUM_TRUCKS = converted;
+            break;
+
+        case 'p':
+            CONV_CHECK(-p);
+            LOCAL_SIZE = converted;
+            break;
+
+        // print help
+        case 'h':
+            fprintf(stdout, "Options:\n");
+            do
+            {
+                if (required_argument == long_options[ii].has_arg)
+                {
+                    fprintf(stdout,
+                            "  --%s=<...> / -%c <...>\n   ",
+                            long_options[ii].name,
+                            long_options[ii].val);
+                }
+                else
+                {
+                    fprintf(stdout,
+                            "  --%s / -%c\n   ",
+                            long_options[ii].name,
+                            long_options[ii].val);
+                }
+                fprintf(stdout, "%s\n", help_strings[ii]);
+            }
+            while (long_options[++ii].name);
+            exit(0);
+            break;
+
+        case 'v':
+            VERBOSE_OUTPUT = 1;
+            break;
+
+        case '?':
+            fprintf(stderr, "exiting.\n");
+            exit(1);
+            break;
+
+        default:
+            fprintf(stderr, "Unrecognised argument\n");
+            exit(1);
+        }
+    }
 }
 
 int main
 (int argc, char* argv[])
 {
+    parseArgs(argc, argv);
+
     // TODO change input from command line
     RunInfo r;
     r.parseInput(INPUT_FILE);
     r.genSortedCWS();
 
-    OCLLearn ocl_learner(r, OCL_TYPE);
+    OCLLearn ocl_learner(r);
 
     alg_result_t result;
 

@@ -310,7 +310,7 @@ void OCLLearn::genChromosomes
             cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles <= NUM_TRUCKS);
+        while (kk && cur_vehicles < NUM_TRUCKS);
 
         // no nodes left to add
         if (!kk
@@ -327,18 +327,5 @@ void OCLLearn::genChromosomes
             #endif
         }
     }
-    #ifdef VERBOSE
-    std::cout << std::endl;
-    #endif
-
-        #if 1
-        //std::sort(total_route.begin(), total_route.end());
-        for (ii = 0; ii < all_routes.at(0).size(); ii++)
-        {
-            std::cout << all_routes.at(0).at(ii) << " ";
-        }
-        //std::cout << kk << ", " << cur_vehicles;
-        std::cout << std::endl;
-        #endif
 }
 

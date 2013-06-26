@@ -115,9 +115,6 @@ private:
     //0, 1, 2, 3, 4, ...., 75
     route_vec_t all_stops;
 
-    // opencl device type
-    int DT;
-
     // kernels
     cl_knl_t fitness_kernel;
     cl_knl_t TSP_kernel;
@@ -165,7 +162,7 @@ public:
     (void);
 
     OCLLearn
-    (const RunInfo& run_info, int dt);
+    (const RunInfo& run_info);
 
 };
 
@@ -220,7 +217,7 @@ static int breed_strategy = CX;
 // number of trucks in whole route - 7 or 8
 static unsigned int NUM_TRUCKS = 7;
 // max number of stops per route
-static unsigned int STOPS_PER_ROUTE = 15;
+static unsigned int STOPS_PER_ROUTE = 14;
 // min capacity before route making will give up
 static unsigned int MIN_CAPACITY = 5;
 // % chance of taking a pair when making initial routes
@@ -229,7 +226,14 @@ static unsigned int MIN_CAPACITY = 5;
 static unsigned int RAND_THRESHOLD = 95;
 // number of parents to consider in arena selection
 static unsigned int ARENA_SIZE = 10;
+// iterations
+static size_t GENERATIONS = 100;
 
 // whether to print everything out
-static unsigned int VERBOSE_OUTPUT = 0;
+static int VERBOSE_OUTPUT = 0;
+
+// opencl params
+static int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
+static size_t GLOBAL_SIZE = 256;
+static size_t LOCAL_SIZE = 128;
 

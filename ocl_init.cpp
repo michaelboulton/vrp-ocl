@@ -92,7 +92,7 @@ void OCLLearn::initOCL
     std::cout << platforms.size() << " platforms";
     std::cout << std::endl;
     std::cout << "looking for devices of type ";
-    std::cout << (DT==CL_DEVICE_TYPE_CPU ? "CPU" : "GPU") << ": ";
+    std::cout << (DEVICE_TYPE==CL_DEVICE_TYPE_CPU ? "CPU" : "GPU") << ": ";
     std::cout << std::endl;
     #endif
 
@@ -108,7 +108,7 @@ void OCLLearn::initOCL
             cl_context_properties properties[3] = {CL_CONTEXT_PLATFORM,
                 (cl_context_properties)(platforms.at(ii))(), 0};
 
-            context = cl::Context(DT, properties);
+            context = cl::Context(DEVICE_TYPE, properties);
             devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
             break;
@@ -145,7 +145,7 @@ void OCLLearn::initOCL
 
     std::stringstream options;
     options << "-cl-fast-relaxed-math ";
-    options << "-cl-strict-aliasing ";
+    //options << "-cl-strict-aliasing ";
     options << "-cl-mad-enable ";
     options << "-cl-no-signed-zeros ";
     //options << "-cl-opt-disable ";
@@ -159,12 +159,17 @@ void OCLLearn::initOCL
     options << "-DNUM_TRUCKS=" << NUM_TRUCKS * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
     options << "-DCAPACITY=" << info.capacity << " ";
-    options << "-DGROUP_SIZE=" << GROUP_SIZE << " ";
+    options << "-DGROUP_SIZE=" << LOCAL_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
     options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";
     options << "-DDEPOT_NODE=" << info.depot_node << " ";
-    options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
+
+    // use only if its value is set, otherwise just choose randomly
+    if (0 != ARENA_SIZE)
+    {
+        options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
+    }
 
     // mutation rate
     options << "-DMUT_RATE=" << mutrate << " ";
@@ -427,12 +432,12 @@ void OCLLearn::initOCL
 
     // sizes for workgroup
     global = cl::NDRange(GLOBAL_SIZE);
-    local = cl::NDRange(GROUP_SIZE);
+    local = cl::NDRange(LOCAL_SIZE);
 }
 
 OCLLearn::OCLLearn
-(RunInfo const& run_info, int dt)
-:info(run_info), DT(dt),
+(RunInfo const& run_info)
+:info(run_info),
 all_chrom_size((run_info.node_coords.size() - 1) * GLOBAL_SIZE * sizeof(int))
 {
     srand(time(NULL));
