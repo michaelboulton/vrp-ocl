@@ -310,12 +310,12 @@ void OCLLearn::genChromosomes
             cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles < NUM_TRUCKS);
+        while (kk && cur_vehicles < NUM_SUBROUTES);
 
         // no nodes left to add
         if (!kk
         // right number of trucks being used the route
-        && cur_vehicles == NUM_TRUCKS
+        && cur_vehicles == NUM_SUBROUTES
         // haven't already generated it
         && all_routes.end() == std::find(all_routes.begin(),
                                          all_routes.end(),

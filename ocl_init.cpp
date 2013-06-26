@@ -154,13 +154,12 @@ void OCLLearn::initOCL
     options << "-DNOTEST ";
 
     // extra options
-    options << "-DNUM_COORDS=" << info.node_coords.size() << " ";
-    options << "-DNUM_TRUCKS=" << NUM_TRUCKS * 2 << " ";
+    options << "-DNUM_NODES=" << info.node_coords.size() - 1 << " ";
+    options << "-DNUM_SUBROUTES=" << NUM_SUBROUTES * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
     options << "-DCAPACITY=" << info.capacity << " ";
-    options << "-DGROUP_SIZE=" << LOCAL_SIZE << " ";
+    options << "-DLOCAL_SIZE=" << LOCAL_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
-    options << "-DROUTE_STOPS=" << all_chrom_size / (GLOBAL_SIZE * sizeof(int)) << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";
     options << "-DDEPOT_NODE=" << info.depot_node << " ";
 
@@ -209,11 +208,11 @@ void OCLLearn::initOCL
                           all_chrom_size);
     buffers["children"] = children_buf;
 
-    // holds arrays of length NUM_TRUCKS corresponding to where sub routes begin and and in each route
+    // holds arrays of length NUM_SUBROUTES corresponding to where sub routes begin and and in each route
     // max 2 times original length
     cl_buf_t route_starts_buf(context,
                               CL_MEM_READ_WRITE,
-                              NUM_TRUCKS * 2 * GLOBAL_SIZE * sizeof(int));
+                              NUM_SUBROUTES * 2 * GLOBAL_SIZE * sizeof(int));
     buffers["starts"] = route_starts_buf;
 
     // start with size 1, corresponding to depot 0

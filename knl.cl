@@ -23,14 +23,13 @@
 #ifndef NOTEST
 #define MUT_RATE 25
 #define MUT_SWAP
-#define NUM_TRUCKS 7
+#define NUM_SUBROUTES 7
 #define NUM_COORDS 75
 #define CAPACITY 220
-#define GROUP_SIZE 256
+#define LOCAL_SIZE 256
 #define GLOBAL_SIZE 256
 #define MAX_PER_ROUTE 12
 #define K_OPT 2
-#define ROUTE_STOPS (75)
 #endif
 
 typedef struct sort_info {
@@ -138,8 +137,8 @@ void findRouteStarts
     uint cur_capacity = 0;
 
     // increment pointers to point to this thread's chromosome values
-    chromosomes  += GROUP_SIZE * ROUTE_STOPS * group_id + loc_id * ROUTE_STOPS;
-    route_starts += GROUP_SIZE * NUM_TRUCKS  * group_id + loc_id * NUM_TRUCKS;
+    chromosomes  += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
+    route_starts += LOCAL_SIZE * NUM_SUBROUTES  * group_id + loc_id * NUM_SUBROUTES;
 
     // stops in current route - initially 0
     uint stops_taken = 0;
@@ -147,20 +146,20 @@ void findRouteStarts
     // stuff currently in truck - 0 at first
     cur_capacity = 0;
 
-    for(ii = 0; ii < NUM_TRUCKS; ii++)
+    for(ii = 0; ii < NUM_SUBROUTES; ii++)
     {
         route_starts[ii] = 0;
     }
 
     rr = 1;
 
-    for(ii = 0; ii < ROUTE_STOPS; ii++)
+    for(ii = 0; ii < NUM_NODES; ii++)
     {
         // ignore depot stops - go back to depot when its full / too many things in route
         while(chromosomes[ii] == 1)
         {
             ii++;
-            if(ii >= ROUTE_STOPS) break;
+            if(ii >= NUM_NODES) break;
         }
 
         cur_capacity += node_demands[chromosomes[ii]];
@@ -217,7 +216,7 @@ float totalRouteLength
     uint stops_taken = 1;
 
     for(ii = 0, jj = 1;
-    ii < ROUTE_STOPS - 1 && jj < ROUTE_STOPS;
+    ii < NUM_NODES - 1 && jj < NUM_NODES;
     ii++, jj++)
     {
         cur_capacity += node_demands[chromosome[jj]];
@@ -243,7 +242,7 @@ float totalRouteLength
     }
 
     // add distance to last node
-    total_distance += euclideanDistance(node_coords[chromosome[ROUTE_STOPS - 1]],
+    total_distance += euclideanDistance(node_coords[chromosome[NUM_NODES - 1]],
                                         node_coords[DEPOT_NODE]);
 
     return total_distance;
@@ -256,7 +255,7 @@ float routeLength
     uint ii;
     float route_length = 0.0f;
 
-    for(ii = 0; ii < ROUTE_STOPS; ii++)
+    for(ii = 0; ii < NUM_NODES; ii++)
     {
         route_length += euclideanDistance(node_coords[chromosome[ii]],
                                           node_coords[chromosome[ii + 1]]);
@@ -279,7 +278,7 @@ __kernel void fitness
     const uint group_id = get_group_id(0);
 
     // offset to this work item
-    chromosomes += GROUP_SIZE * group_id * ROUTE_STOPS + loc_id * ROUTE_STOPS;
+    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
 
     results[glob_id] = totalRouteLength(chromosomes,
                                         node_coords,
@@ -292,7 +291,7 @@ __kernel void fitness
 */
 
 __kernel void ParallelBitonic_NonElitist
-(__global const float * __restrict route_lengths,
+(__global       float * __restrict route_lengths,
  __global const uint *  __restrict chromosomes,
  __global       uint *  __restrict output)
 {
@@ -300,9 +299,9 @@ __kernel void ParallelBitonic_NonElitist
     int group_id = get_group_id(0) ;
     int loc_id = get_local_id(0) ;
 
-    __local sort_t aux[GROUP_SIZE * 2];
+    __local sort_t aux[LOCAL_SIZE * 2];
 
-    route_lengths += group_id * GROUP_SIZE;
+    route_lengths += group_id * LOCAL_SIZE;
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
@@ -310,7 +309,7 @@ __kernel void ParallelBitonic_NonElitist
     // need to be twice the group size because this works on twice the range
     sort_pair.route_length = route_lengths[loc_id];
     // idx is the location of the current chromosome, relative to beginning of work group
-    sort_pair.idx = chromosomes + GROUP_SIZE * ROUTE_STOPS * group_id + loc_id * ROUTE_STOPS;
+    sort_pair.idx = chromosomes + LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
     aux[loc_id] = sort_pair;
 
     // Load block in AUX[WG]
@@ -318,7 +317,7 @@ __kernel void ParallelBitonic_NonElitist
     barrier(CLK_LOCAL_MEM_FENCE); // make sure AUX is entirely up to date
 
     // Loop on sorted sequence length
-    for (int length = 1; length < GROUP_SIZE; length <<= 1)
+    for (int length = 1; length < LOCAL_SIZE; length <<= 1)
     {
         bool direction = ((ii & (length << 1)) != 0); // direction of sort: 0=asc, 1=desc
         // Loop on comparison distance (between keys)
@@ -340,16 +339,19 @@ __kernel void ParallelBitonic_NonElitist
 
     uint kk;
 
-    output += GROUP_SIZE * ROUTE_STOPS * group_id + loc_id * ROUTE_STOPS;
+    output += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
     __global const uint* input = aux[loc_id].idx;
-    for(kk = 0; kk < ROUTE_STOPS; kk++)
+    for(kk = 0; kk < NUM_NODES; kk++)
     {
         output[kk] = input[kk];
     }
+
+    route_lengths += LOCAL_SIZE * group_id + loc_id;
+    route_lengths[0] = aux[loc_id].route_length;
 }
 
 __kernel void ParallelBitonic_Elitist
-(__global const float * __restrict route_lengths,
+(__global       float * __restrict route_lengths,
  __global const uint *  __restrict parents,
  __global const uint *  __restrict children,
  __global       uint *  __restrict output)
@@ -359,10 +361,10 @@ __kernel void ParallelBitonic_Elitist
     int loc_id = get_local_id(0) ;
     int loc_div;
 
-    __local sort_t aux[GROUP_SIZE * 4];
+    __local sort_t aux[LOCAL_SIZE * 4];
 
     // offset to this work group
-    route_lengths += group_id * GROUP_SIZE;
+    route_lengths += group_id * LOCAL_SIZE;
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
@@ -373,14 +375,14 @@ __kernel void ParallelBitonic_Elitist
     {
         // then use this to access children
         loc_div = loc_id / 2;
-        sort_pair.idx = children + GROUP_SIZE * ROUTE_STOPS * group_id + loc_div * ROUTE_STOPS;
+        sort_pair.idx = children + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div];
     }
     else
     {
         // then use this to access parents
         loc_div = (loc_id - 1) / 2;
-        sort_pair.idx = parents + GROUP_SIZE * ROUTE_STOPS * group_id + loc_div * ROUTE_STOPS;
+        sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
 
@@ -410,14 +412,17 @@ __kernel void ParallelBitonic_Elitist
     }
 
     // copy back only the first half
-    if(loc_id < GROUP_SIZE)
+    if(loc_id < LOCAL_SIZE)
     {
-        output += GROUP_SIZE * ROUTE_STOPS * group_id + loc_id * ROUTE_STOPS;
+        output += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
         __global const uint* input = aux[loc_id].idx;
-        for(ii = 0; ii < ROUTE_STOPS; ii++)
+        for(ii = 0; ii < NUM_NODES; ii++)
         {
             output[ii] = input[ii];
         }
+
+        route_lengths += LOCAL_SIZE * group_id + loc_id;
+        route_lengths[0] = aux[loc_id].route_length;
     }
 }
 
@@ -448,7 +453,7 @@ __kernel void cx
     uint ii, jj, cc;
 
     // offset to this work group
-    parents += GROUP_SIZE * ROUTE_STOPS * group_id;
+    parents += LOCAL_SIZE * NUM_NODES * group_id;
 
     // randomly choose
     uint other_parent, counter = 0, tmp_rand;
@@ -467,24 +472,24 @@ __kernel void cx
     // randomly choose
     do
     {
-        other_parent = MWC64X(&state[glob_id]) % GROUP_SIZE;
+        other_parent = MWC64X(&state[glob_id]) % LOCAL_SIZE;
     }
     while (other_parent == loc_id);
     #endif
 
     // offset to this item
-    __global const uint* parent_1 = parents + loc_id * ROUTE_STOPS;
+    __global const uint* parent_1 = parents + loc_id * NUM_NODES;
 
     // other parent
-    __global const uint* parent_2 = parents + other_parent * ROUTE_STOPS;
+    __global const uint* parent_2 = parents + other_parent * NUM_NODES;
 
     // at the end, will hold array of numbers form 1-num cycles
-    int cycles[ROUTE_STOPS];
+    int cycles[NUM_NODES];
     // to see which ones have been visited
-    int vis_mask[ROUTE_STOPS];
+    int vis_mask[NUM_NODES];
 
     // reset
-    for(jj = 0; jj < ROUTE_STOPS; jj++)
+    for(jj = 0; jj < NUM_NODES; jj++)
     {
         cycles[jj] = 0;
         vis_mask[jj] = 0;
@@ -502,7 +507,7 @@ __kernel void cx
     do
     {
         // find the index of target in the first parent
-        for(jj = 0; jj < ROUTE_STOPS; jj++)
+        for(jj = 0; jj < NUM_NODES; jj++)
         {
             if(parent_1[jj] == target)
             {
@@ -514,7 +519,7 @@ __kernel void cx
         // it has already been in the current cycle - back to beginning
         if(vis_mask[next_idx])
         {
-            for(jj = 0; jj < ROUTE_STOPS; jj++)
+            for(jj = 0; jj < NUM_NODES; jj++)
             {
                 if(vis_mask[jj])
                 {
@@ -527,7 +532,7 @@ __kernel void cx
 
             bool end = true;
             // see if they've all been added
-            for(jj = 0; jj < ROUTE_STOPS; jj++)
+            for(jj = 0; jj < NUM_NODES; jj++)
             {
                 // if even a single one remains, dont finish
                 if(!cycles[jj])
@@ -546,7 +551,7 @@ __kernel void cx
             // find next that isn't already in a route
             do
             {
-                target = MWC64X(&state[glob_id]) % ROUTE_STOPS;
+                target = MWC64X(&state[glob_id]) % NUM_NODES;
             }
             while(cycles[target]);
 
@@ -567,7 +572,7 @@ __kernel void cx
     while(1);
 
     // copy into child first - dont mess up parent if elitist sorting
-    uint child[ROUTE_STOPS];
+    uint child[NUM_NODES];
 
     // flip parent between cycles
     bool parent_flip = false;
@@ -576,7 +581,7 @@ __kernel void cx
     for(ii = 1; ii <= cc; ii++)
     {
         // go through cycle, picking from one parent or another
-        for(jj = 0; jj < ROUTE_STOPS; jj++)
+        for(jj = 0; jj < NUM_NODES; jj++)
         {
             // if the current cycle contained this idx
             if(cycles[jj] == ii)
@@ -600,8 +605,8 @@ __kernel void cx
         // reverse a random section of the chromosome
         uint ll, uu, range;
 
-        ll = MWC64X(&state[glob_id]) % ROUTE_STOPS;
-        range = MWC64X(&state[glob_id]) % (ROUTE_STOPS - ll);
+        ll = MWC64X(&state[glob_id]) % NUM_NODES;
+        range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
         uu = ll + range;
 
         for(; ll < uu; ll++, uu--)
@@ -627,12 +632,12 @@ __kernel void cx
          */
 
         // value to start bottom end of swap at - skewed towards bottom end
-        ll1 = MWC64X(&state[glob_id]) % ROUTE_STOPS;
+        ll1 = MWC64X(&state[glob_id]) % NUM_NODES;
         // FIXME not working - hanging
-        //ll1 = MWC64X(&state[glob_id]) % (MWC64X(&state[glob_id]) % ROUTE_STOPS);
+        //ll1 = MWC64X(&state[glob_id]) % (MWC64X(&state[glob_id]) % NUM_NODES);
 
         // range is random length smaller than that left...
-        range = MWC64X(&state[glob_id]) % (ROUTE_STOPS - ll1);
+        range = MWC64X(&state[glob_id]) % (NUM_NODES - ll1);
         // ...and enough to fit 2 ranges in to swap
         range /= 2;
 
@@ -641,7 +646,7 @@ __kernel void cx
 
         // calculate ll2 as some position long enough to fit the swap range in
         // after
-        ll2 = MWC64X(&state[glob_id]) % (ROUTE_STOPS - (uu1 + range));
+        ll2 = MWC64X(&state[glob_id]) % (NUM_NODES - (uu1 + range));
         // and its after uu1
         ll2 += uu1;
 
@@ -659,10 +664,10 @@ __kernel void cx
     }
 
     // increment children to point to this threads chromosome child
-    children += GROUP_SIZE * ROUTE_STOPS * group_id + loc_id * ROUTE_STOPS;
+    children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
 
     // copy into children
-    for(ii = 0; ii < ROUTE_STOPS; ii++)
+    for(ii = 0; ii < NUM_NODES; ii++)
     {
         children[ii] = child[ii];
     }
@@ -674,7 +679,7 @@ __kernel void simpleTSP
 (__global uint* __restrict chromosomes,
  __global int* __restrict route_starts,
  __constant const uint2* const __restrict node_coords,
- __constant const uint*    const __restrict node_demands,
+ __constant const uint*  const __restrict node_demands,
  __global uint2* const __restrict state)
 {
     uint glob_id = get_global_id(0);
@@ -690,12 +695,12 @@ __kernel void simpleTSP
                     route_starts);
 
     // offset
-    chromosomes += GROUP_SIZE * group_id * ROUTE_STOPS + loc_id * ROUTE_STOPS;
-    route_starts += GROUP_SIZE * group_id * NUM_TRUCKS + loc_id * NUM_TRUCKS;
+    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+    route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
 
     // copy chromosome into private memory
-    uint chromosome[ROUTE_STOPS];
-    for(ii = 0; ii < ROUTE_STOPS; ii++)
+    uint chromosome[NUM_NODES];
+    for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosome[ii] = chromosomes[ii];
     }
@@ -725,7 +730,7 @@ __kernel void simpleTSP
         }
         else
         {
-            route_end = ROUTE_STOPS;
+            route_end = NUM_NODES;
         }
 
         // length of current route
@@ -767,7 +772,7 @@ __kernel void simpleTSP
     }
 
     // copy chromosome back
-    for(ii = 0; ii < ROUTE_STOPS; ii++)
+    for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosomes[ii] = chromosome[ii];
     }
@@ -789,21 +794,21 @@ __kernel void foreignExchange
     {
         // best in this work group
         __global uint* local_chrom = chromosomes
-            + GROUP_SIZE * group_id * ROUTE_STOPS;
+            + LOCAL_SIZE * group_id * NUM_NODES;
 
         // best in the other work group
         __global uint* foreign_chrom = chromosomes
-            + GROUP_SIZE * (group_id + (num_groups / 2)) * ROUTE_STOPS;
+            + LOCAL_SIZE * (group_id + (num_groups / 2)) * NUM_NODES;
 
-        int rand_offset = MWC64X(&state[get_global_id(0)]) % GROUP_SIZE;
+        int rand_offset = MWC64X(&state[get_global_id(0)]) % LOCAL_SIZE;
 
-        foreign_chrom += ROUTE_STOPS * rand_offset;
+        foreign_chrom += NUM_NODES * rand_offset;
 
         uint tmp_val;
         #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
 
         uint ii;
-        for(ii = 0; ii < ROUTE_STOPS; ii++)
+        for(ii = 0; ii < NUM_NODES; ii++)
         {
             SWAP(local_chrom[ii], foreign_chrom[ii]);
         }

@@ -177,7 +177,7 @@ void printRoute
     uint max_cap, max_stops;
 
     for (max_cap = MIN_CAPACITY; max_cap < info.capacity; max_cap++)
-    for (max_stops = NUM_TRUCKS; max_stops < STOPS_PER_ROUTE; max_stops++)
+    for (max_stops = NUM_SUBROUTES; max_stops < STOPS_PER_ROUTE; max_stops++)
     {
         // initial counts
         unsigned int cur_capacity = 0;
@@ -339,6 +339,7 @@ void parseArgs
     {
         {"arena_size", required_argument, 0, 'a'},
         {"min_capacity", required_argument, 0, 'c'},
+        {"select_strategy", required_argument, 0, 'e'},
         {"per_generation", required_argument, 0, 'g'},
         {"help", no_argument, 0, 'h'},
         {"iterations", required_argument, 0, 'i'},
@@ -356,6 +357,7 @@ void parseArgs
     {
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
+        "Selection strategy - whether to keep the best of parents and children (ELITIST) or just the children (NONELITIST)",
         "Total size - how many chromosomes in total in all populations",
         "Print help",
         "Iterations - number of generations to go through",
@@ -384,7 +386,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:c:g:hi:m:n:p:r:s:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:c:e:g:hi:m:n:p:r:s:v",
                                    long_options, &option_index)))
         {
             break;
@@ -409,6 +411,30 @@ void parseArgs
             MIN_CAPACITY = converted;
             break;
 
+        case 'e':
+            // make argument all uppercase
+            read_arg = std::string(optarg);
+            std::transform(read_arg.begin(),
+                           read_arg.end(),
+                           read_arg.begin(),
+                           toupper);
+            if (std::string::npos != read_arg.find("ELITIST"))
+            {
+                sort_strategy = ELITIST;
+            }
+            else if (std::string::npos != read_arg.find("NONELITIST"))
+            {
+                sort_strategy = NONELITIST;
+            }
+            else
+            {
+                fprintf(stderr,
+                        "Unknown selection strategy '%s' passed to -e\n",
+                        optarg);
+                exit(1);
+            }
+            break;
+
         case 'g':
             CONV_CHECK(-g, 2);
             GLOBAL_SIZE = converted;
@@ -423,7 +449,7 @@ void parseArgs
 
         case 'n':
             CONV_CHECK(-c, 1);
-            NUM_TRUCKS = converted;
+            NUM_SUBROUTES = converted;
             break;
 
         case 'm':

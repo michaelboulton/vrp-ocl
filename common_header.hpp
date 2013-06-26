@@ -215,7 +215,7 @@ enum {TWOPOINT, PMX, CX};
 static int breed_strategy = CX;
 
 // number of trucks in whole route - 7 or 8
-static unsigned int NUM_TRUCKS = 7;
+static unsigned int NUM_SUBROUTES = 7;
 // max number of stops per route
 static unsigned int STOPS_PER_ROUTE = 14;
 // min capacity before route making will give up
