@@ -154,7 +154,6 @@ void OCLLearn::initOCL
     options << "-DNOTEST ";
 
     // extra options
-    options << "-DNUM_PAIRS=" << info.CWS_pair_list.size() << " ";
     options << "-DNUM_COORDS=" << info.node_coords.size() << " ";
     options << "-DNUM_TRUCKS=" << NUM_TRUCKS * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";

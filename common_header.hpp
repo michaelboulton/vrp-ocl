@@ -227,13 +227,13 @@ static unsigned int RAND_THRESHOLD = 95;
 // number of parents to consider in arena selection
 static unsigned int ARENA_SIZE = 10;
 // iterations
-static size_t GENERATIONS = 100;
+static size_t GENERATIONS = 500;
 
 // whether to print everything out
 static int VERBOSE_OUTPUT = 0;
 
 // opencl params
 static int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
-static size_t GLOBAL_SIZE = 256;
+static size_t GLOBAL_SIZE = 512;
 static size_t LOCAL_SIZE = 128;
 

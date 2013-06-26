@@ -342,8 +342,8 @@ void parseArgs
         {"per_generation", required_argument, 0, 'g'},
         {"help", no_argument, 0, 'h'},
         {"iterations", required_argument, 0, 'i'},
-        {"num_trucks", required_argument, 0, 'n'},
         {"mutstrat", required_argument, 0, 'm'},
+        {"num_trucks", required_argument, 0, 'n'},
         {"per_population", required_argument, 0, 'p'},
         {"mutrate", required_argument, 0, 'r'},
         {"stops_per_route", required_argument, 0, 's'},
@@ -354,13 +354,13 @@ void parseArgs
     // help strings corresponding to each option - keep in same order!
     static const char* help_strings[] = 
     {
-        "Arena size - size of arena to do arena selection",
+        "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
         "Total size - how many chromosomes in total in all populations",
         "Print help",
         "Iterations - number of generations to go through",
-        "Number of trucks - number of subroutes in a total route to create routes for",
         "Mutation strategy - what kind of mutation strategy to use. Either SWAP or REVERSE",
+        "Number of trucks - number of subroutes in a total route to create routes for",
         "Population size - size per population in the total number of populations",
         "Mutation rate - percentage chance of a chromosome being mutated",
         "Stops per route - number of stops before route creation will go back to depot",
@@ -370,9 +370,11 @@ void parseArgs
     int option_index, c;
     long int converted;
     int ii = 0;
+    // buffer for parsing string arguments
+    std::string read_arg;
 
-    #define CONV_CHECK(arg_name)                            \
-        if (1 > (converted = strtol(optarg, NULL, 10)))     \
+    #define CONV_CHECK(arg_name, min)                       \
+        if (min > (converted = strtol(optarg, NULL, 10)))   \
         {                                                   \
             fprintf(stderr,                                 \
                     "Invalid argument %ld passed to %s\n",  \
@@ -382,7 +384,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "hva:g:i:n:p:",
+        if (-1 == (c = getopt_long(argc, argv, "a:c:g:hi:m:n:p:r:s:v",
                                    long_options, &option_index)))
         {
             break;
@@ -398,28 +400,69 @@ void parseArgs
             break;
 
         case 'a':
-            CONV_CHECK(-a);
+            CONV_CHECK(-a, 0);
             ARENA_SIZE = converted;
             break;
 
+        case 'c':
+            CONV_CHECK(-c, 0);
+            MIN_CAPACITY = converted;
+            break;
+
         case 'g':
-            CONV_CHECK(-g);
+            CONV_CHECK(-g, 2);
             GLOBAL_SIZE = converted;
             break;
 
+        // h is further down
+
         case 'i':
-            CONV_CHECK(-i);
+            CONV_CHECK(-i, 0);
             GENERATIONS = converted;
             break;
 
         case 'n':
-            CONV_CHECK(-c);
+            CONV_CHECK(-c, 1);
             NUM_TRUCKS = converted;
             break;
 
+        case 'm':
+            // make argument all uppercase
+            read_arg = std::string(optarg);
+            std::transform(read_arg.begin(),
+                           read_arg.end(),
+                           read_arg.begin(),
+                           toupper);
+            if (std::string::npos != read_arg.find("REVERSE"))
+            {
+                mutate_strategy = REVERSE;
+            }
+            else if (std::string::npos != read_arg.find("SWAP"))
+            {
+                mutate_strategy = SWAP;
+            }
+            else
+            {
+                fprintf(stderr,
+                        "Unknown mutation strategy '%s' passed to -m\n",
+                        optarg);
+                exit(1);
+            }
+            break;
+
         case 'p':
-            CONV_CHECK(-p);
+            CONV_CHECK(-p, 2);
             LOCAL_SIZE = converted;
+            break;
+
+        case 'r':
+            CONV_CHECK(-r, 0);
+            mutrate = converted;
+            break;
+
+        case 's':
+            CONV_CHECK(-s, 1);
+            STOPS_PER_ROUTE = converted;
             break;
 
         // print help
