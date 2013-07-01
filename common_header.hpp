@@ -72,6 +72,7 @@ typedef std::map< unsigned int, point_t > node_map_t;
 
 float euclideanDistance (point_t, point_t);
 void printRoute (const route_vec_t& route, const RunInfo& info);
+void parseArgs (int argc, char* argv[]);
 
 class RunInfo
 {
@@ -236,4 +237,6 @@ static int VERBOSE_OUTPUT = 0;
 static int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
 static size_t GLOBAL_SIZE = 512;
 static size_t LOCAL_SIZE = 128;
+
+static std::string INPUT_FILE("fruitybun-data.vrp");
 

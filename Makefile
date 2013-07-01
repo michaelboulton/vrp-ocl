@@ -18,6 +18,7 @@ FILES=\
 	ocl_init.o \
 	ocl_run.o \
 	tbb_cws.o \
+	parse.o \
 	learning.o \
 	cws.o
 

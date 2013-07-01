@@ -22,141 +22,15 @@
 
 #include "common_header.hpp"
 
-// returns number of nodes not yet in the total route
-int OCLLearn::nodesLeft
-(route_vec_t const& total_route,
- route_vec_t& stops_remaining)
+void TBBRouteMaker::operator()
+(route_vec_t& route) const
+//(const tbb::blocked_range<size_t>& r) const
 {
-    // measuring how many nodes are left to add to route
-    route_vec_t trace_count;
-    unsigned int kk = 0;
-    unsigned int jj = 0;
-
-    // make a reference so I don't need .info in front of it
-    const demand_vec_t& node_demands = info.node_demands;
-
-    // iterators for the various things
-    route_vec_t::iterator tc_it;
-    route_vec_t::iterator tr_it;
-    route_vec_t::iterator td_it;
-    route_vec_t::iterator last_elem;
-
-    // copy
-    trace_count = total_route;
-    // sort
-    std::sort(trace_count.begin(),
-              trace_count.end());
-    // make unique
-    last_elem = std::unique(trace_count.begin(),
-                            trace_count.end());
-
-    // remove duplicates
-    if(last_elem != trace_count.end())
-    {
-        for(jj=trace_count.end() - last_elem; jj; --jj)
-        {
-            trace_count.pop_back();
-        }
-
-        // remove the last element which will not be unique (???)
-        trace_count.pop_back();
-    }
-
-    // get all elements that have not yet been added to route
-    std::set_difference(all_stops.begin(),
-                        all_stops.end(),
-                        trace_count.begin(),
-                        trace_count.end(),
-                        stops_remaining.begin());
-
-    // the number of nodes which have not yet been visited
-    kk = node_demands.size()-trace_count.size();
-    // if all stops have been visited
-    if (stops_remaining.at(0) == 0) kk--;
-
-    return kk;
-}
-
-void OCLLearn::addNode
-(route_vec_t& subroute,
- route_vec_t const& total_route,
- unsigned int& current_capacity,
- unsigned int pair_first,
- unsigned int pair_second)
-{
-    // make a reference so I don't need .info in front of it
-    const demand_vec_t& node_demands = info.node_demands;
-
-    // if the first one of the pair is the same as the first in the
-    // current route (After the depot) then add the second one
-    // to the beginning if it wont overdo the capacity
-    if (pair_first == subroute.at(0)
-    && std::find(subroute.begin(),
-                 subroute.end(),
-                 pair_second) == subroute.end())
-    {
-        if(node_demands.at(pair_second) < current_capacity)
-        {
-            // create new route, add the new node to the begin
-            // of the route, then add the rest on again
-            subroute.insert(subroute.begin(), pair_second);
-            current_capacity -= (node_demands.at(pair_second));
-        }
-    }
-    // if the second in the pair is at the beginning of the route
-    else if (pair_second == subroute.at(0)
-    && std::find(subroute.begin(),
-                 subroute.end(),
-                 pair_first) == subroute.end())
-    {
-        if(node_demands.at(pair_first) < current_capacity)
-        {
-            // do the same, but add the FIRST of the pair this time
-            subroute.insert(subroute.begin(), pair_first);
-            current_capacity -= (node_demands.at(pair_first));
-        }
-    }
-    // if the first int he pair is at the end of the route
-    else if (pair_first == subroute.back()
-    && std::find(subroute.begin(),
-                 subroute.end(),
-                 pair_second) == subroute.end())
-    {
-        if(node_demands.at(pair_second) < current_capacity)
-        {
-            // add it to the end of the current subroute
-            subroute.push_back(pair_second);
-            current_capacity -= (node_demands.at(pair_second));
-        }
-    }
-    // if the second in the pair is at the end of the subroute
-    else if (pair_second == subroute.back()
-    && std::find(subroute.begin(),
-                 subroute.end(),
-                 pair_first) == subroute.end())
-    {
-        if(node_demands.at(pair_first) < current_capacity)
-        {
-            // add it to the end of the current subroute
-            subroute.push_back(pair_first);
-            current_capacity -= (node_demands.at(pair_first));
-        }
-    }
-}
-
-// returns vector of valid routes
-void OCLLearn::genChromosomes
-(std::vector<route_vec_t>& all_routes)
-{
+#if 0
     unsigned int ii, jj, kk;
 
     // random numbers that decide whether to use a connection or not
     unsigned int loop_rand = 0;
-
-    // refs
-    const point_info_vec_t& CWS_pair_list = info.CWS_pair_list;
-    const node_map_t& node_coords = info.node_coords;
-    const demand_vec_t& node_demands = info.node_demands;
 
     #ifdef VERBOSE
     std::cout << std::endl;
@@ -165,7 +39,7 @@ void OCLLearn::genChromosomes
 
     // TODO this while loop is the bit that needs to be task parallelised
     // while we still dont have enough chromosomes
-    while (all_routes.size() < GLOBAL_SIZE)
+    while (1)
     {
         // initialise route to take
         route_vec_t total_route;
@@ -200,6 +74,7 @@ void OCLLearn::genChromosomes
             // and isn't the depot
             || pair_first == info.depot_node);
 
+            // FIXME TODO XXX just choose the pair, dont look for another second item (??? why did i do this)
             // go through all pairs, randomly choose one from near the top
             for (ii = 0; ii < CWS_pair_list.size(); ii++)
             {
@@ -310,12 +185,12 @@ void OCLLearn::genChromosomes
             cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles < NUM_SUBROUTES);
+        while (kk && cur_vehicles <= NUM_TRUCKS);
 
         // no nodes left to add
         if (!kk
         // right number of trucks being used the route
-        && cur_vehicles == NUM_SUBROUTES
+        && cur_vehicles == NUM_TRUCKS
         // haven't already generated it
         && all_routes.end() == std::find(all_routes.begin(),
                                          all_routes.end(),
@@ -325,37 +200,20 @@ void OCLLearn::genChromosomes
             #ifdef VERBOSE
             std::cout << "\rGenerating " << GLOBAL_SIZE << " random routes ... " << all_routes.size() <<std::flush;
             #endif
+            break;
         }
     }
+#endif
 }
 
-// function for sorting points
-bool cmp_distance
-(point_info_t first, point_info_t second)
+TBBRouteMaker::TBBRouteMaker
+(const point_info_vec_t& CWS_pair_list_in,
+ const node_map_t& node_coords_in,
+ const demand_vec_t& node_demands_in)
+:CWS_pair_list(CWS_pair_list_in),
+ node_coords(node_coords_in),
+ node_demands(node_demands_in)
 {
-    return first.distance < second.distance;
-}
-
-// get the sorted list of all nodes
-void RunInfo::genSortedCWS
-(void)
-{
-    unsigned int jj;
-    unsigned int ii;
-
-    for (ii = depot_node; ii < node_coords.size(); ii++)
-    {
-        for (jj = ii+1; jj < node_coords.size(); jj++)
-        {
-            point_info_t new_info;
-            new_info.first_index = ii+1;
-            new_info.second_index = jj+1;
-            new_info.distance = euclideanDistance(node_coords.at(ii),
-                                                  node_coords.at(jj));
-            CWS_pair_list.push_back(new_info);
-        }
-    }
-
-    std::sort(CWS_pair_list.begin(), CWS_pair_list.end(), cmp_distance);
+    ;
 }
 
