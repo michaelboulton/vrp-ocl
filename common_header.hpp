@@ -201,42 +201,43 @@ public:
 };
 
 // how to solve TSP
-enum {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
-static int tsp_strategy = SIMPLE;
+enum tsp_e {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
 // which mutation to use
-enum {REVERSE, SWAP};
-static int mutate_strategy = SWAP;
-// mutation rate - out of 100%
-static int mutrate = 25;
+enum mut_e {REVERSE, SWAP};
 // whether to be elitist or not
-enum {ELITIST, NONELITIST};
-static int sort_strategy = NONELITIST;
+enum sort_e {ELITIST, NONELITIST};
 // pmx or crossover
-enum {TWOPOINT, PMX, CX};
-static int breed_strategy = CX;
+enum breed_e {TWOPOINT, PMX, CX};
 
+extern tsp_e tsp_strategy;
+extern mut_e mutate_strategy;
+extern sort_e sort_strategy;
+extern breed_e breed_strategy;
+
+// mutation rate - out of 100%
+extern int MUTRATE;
 // number of trucks in whole route - 7 or 8
-static unsigned int NUM_SUBROUTES = 7;
+extern unsigned int NUM_SUBROUTES;
 // max number of stops per route
-static unsigned int STOPS_PER_ROUTE = 14;
+extern unsigned int STOPS_PER_ROUTE;
 // min capacity before route making will give up
-static unsigned int MIN_CAPACITY = 5;
+extern unsigned int MIN_CAPACITY;
 // % chance of taking a pair when making initial routes
 // too high and GA does nothing, too low and GA doesnt converge
 // 95 seems good - not deterministic, but produces good initial results
-static unsigned int RAND_THRESHOLD = 95;
+extern unsigned int RAND_THRESHOLD;
 // number of parents to consider in arena selection
-static unsigned int ARENA_SIZE = 10;
+extern unsigned int ARENA_SIZE;
 // iterations
-static size_t GENERATIONS = 500;
+extern size_t GENERATIONS;
 
 // whether to print everything out
-static int VERBOSE_OUTPUT = 0;
+extern int VERBOSE_OUTPUT;
 
 // opencl params
-static int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
-static size_t GLOBAL_SIZE = 512;
-static size_t LOCAL_SIZE = 128;
+extern int DEVICE_TYPE;
+extern size_t GLOBAL_SIZE;
+extern size_t LOCAL_SIZE;
 
-static std::string INPUT_FILE("fruitybun-data.vrp");
+extern std::string INPUT_FILE;
 

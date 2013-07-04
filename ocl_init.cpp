@@ -170,7 +170,7 @@ void OCLLearn::initOCL
     }
 
     // mutation rate
-    options << "-DMUT_RATE=" << mutrate << " ";
+    options << "-DMUT_RATE=" << MUTRATE << " ";
 
     // which mutation to use
     if (mutate_strategy == REVERSE)

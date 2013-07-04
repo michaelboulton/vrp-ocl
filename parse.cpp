@@ -22,6 +22,27 @@
 
 #include "common_header.hpp"
 
+// initial parameters
+tsp_e tsp_strategy = SIMPLE;
+mut_e mutate_strategy = SWAP;
+sort_e sort_strategy = NONELITIST;
+breed_e breed_strategy = CX;
+
+int MUTRATE = 25;
+unsigned int NUM_SUBROUTES = 7;
+unsigned int STOPS_PER_ROUTE = 14;
+unsigned int MIN_CAPACITY = 5;
+unsigned int RAND_THRESHOLD = 95;
+unsigned int ARENA_SIZE = 0;
+size_t GENERATIONS = 500;
+int VERBOSE_OUTPUT = 0;
+
+int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
+size_t GLOBAL_SIZE = 512;
+size_t LOCAL_SIZE = 128;
+
+std::string INPUT_FILE("fruitybun-data.vrp");
+
 void parseArgs
 (int argc, char* argv[])
 {
@@ -38,7 +59,7 @@ void parseArgs
         {"mutstrat", required_argument, 0, 'm'},
         {"num_trucks", required_argument, 0, 'n'},
         {"per_population", required_argument, 0, 'p'},
-        {"mutrate", required_argument, 0, 'r'},
+        {"MUTRATE", required_argument, 0, 'r'},
         {"stops_per_route", required_argument, 0, 's'},
         {"verbose", no_argument, 0, 'v'},
         {0, 0, 0, 0}
@@ -181,7 +202,7 @@ void parseArgs
 
         case 'r':
             CONV_CHECK(-r, 0);
-            mutrate = converted;
+            MUTRATE = converted;
             break;
 
         case 's':

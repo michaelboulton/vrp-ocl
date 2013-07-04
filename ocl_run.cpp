@@ -25,7 +25,8 @@
 extern "C" double MPI_Wtime();
 
 float OCLLearn::getBestRoute
-(float& best_route, route_vec_t& best_chromosome, unsigned int ii)
+(float& best_route, route_vec_t& best_chromosome,
+ unsigned int ii)
 {
     float* min_route;
 
@@ -40,11 +41,11 @@ float OCLLearn::getBestRoute
     {
         queue.finish();
 
-        //fitness_kernel.setArg(0, buffers.at("parents"));
-        //queue.enqueueNDRangeKernel(fitness_kernel,
-        //                           cl::NullRange,
-        //                           global,
-        //                           local);
+        fitness_kernel.setArg(0, buffers.at("parents"));
+        queue.enqueueNDRangeKernel(fitness_kernel,
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         queue.finish();
     }
