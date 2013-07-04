@@ -31,7 +31,7 @@ void parseArgs
         {"arena_size", required_argument, 0, 'a'},
         {"min_capacity", required_argument, 0, 'c'},
         {"select_strategy", required_argument, 0, 'e'},
-        {"input_file", required_argument, 0, 'e'},
+        {"input_file", required_argument, 0, 'f'},
         {"per_generation", required_argument, 0, 'g'},
         {"help", no_argument, 0, 'h'},
         {"iterations", required_argument, 0, 'i'},
@@ -50,6 +50,7 @@ void parseArgs
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
         "Selection strategy - whether to keep the best of parents and children (ELITIST) or just the children (NONELITIST)",
+        "Input file - which file to read input from",
         "Total size - how many chromosomes in total in all populations",
         "Print help",
         "Iterations - number of generations to go through",
@@ -78,7 +79,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:c:e:g:hi:m:n:p:r:s:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:c:e:f:g:hi:m:n:p:r:s:v",
                                    long_options, &option_index)))
         {
             break;
@@ -125,6 +126,11 @@ void parseArgs
                         optarg);
                 exit(1);
             }
+            break;
+
+        case 'f':
+            read_arg = std::string(optarg);
+            INPUT_FILE = std::string(optarg);
             break;
 
         case 'g':
@@ -226,7 +232,7 @@ void parseArgs
 
 // get data from file
 void RunInfo::parseInput
-(std::string const& settings_file)
+(void)
 {
     std::string file_line;
     std::string sub;
@@ -235,11 +241,12 @@ void RunInfo::parseInput
     int x, y;
     int depot, demand;
 
-    std::ifstream file_stream(settings_file.c_str(), std::ifstream::in);
+    std::ifstream file_stream(INPUT_FILE.c_str(), std::ifstream::in);
 
     if (!file_stream.is_open())
     {
-        std::cout << "Could not open " << INPUT_FILE << std::endl;
+        std::cout << "Could not open input file ";
+        std::cout << "\"" << INPUT_FILE << "\"" << std::endl;
         exit(1);
     }
 
@@ -256,12 +263,13 @@ void RunInfo::parseInput
     sub = file_line.substr(substr_pos + 3);
     capacity = std::atoi(sub.c_str());
 
+    // read "NODE_COORD_SECTION"
     std::getline(file_stream, file_line);
 
     // read in node coordinates
-    while (file_stream.good())
+    while (std::getline(file_stream, file_line), file_stream.good())
     {
-        std::getline(file_stream, file_line);
+        //std::getline(file_stream, file_line);
         std::istringstream stream(file_line);
         if (file_line.find("DEMAND") != std::string::npos)
         {
@@ -280,9 +288,9 @@ void RunInfo::parseInput
     }
 
     // read in demand for each node
-    while (file_stream.good())
+    while (std::getline(file_stream, file_line), file_stream.good())
     {
-        std::getline(file_stream, file_line);
+        //std::getline(file_stream, file_line);
         std::istringstream stream(file_line);
         if (file_line.find("DEPOT") != std::string::npos)
         {

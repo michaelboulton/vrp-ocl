@@ -93,7 +93,7 @@ public:
     void genSortedCWS (void);
 
     // get data from file
-    void parseInput (std::string const& settings_file);
+    void parseInput (void);
 };
 
 class OCLLearn{

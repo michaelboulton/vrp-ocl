@@ -123,9 +123,8 @@ int main
 {
     parseArgs(argc, argv);
 
-    // TODO change input from command line
     RunInfo r;
-    r.parseInput(INPUT_FILE);
+    r.parseInput();
     r.genSortedCWS();
 
     OCLLearn ocl_learner(r);
