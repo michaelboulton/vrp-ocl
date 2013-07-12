@@ -225,9 +225,6 @@ extern unsigned int MIN_CAPACITY;
 // % chance of taking a pair when making initial routes
 // too high and GA does nothing, too low and GA doesnt converge
 // 95 seems good - not deterministic, but produces good initial results
-<<<<<<< HEAD
-const static int RAND_THRESHOLD = 95;
-=======
 extern unsigned int RAND_THRESHOLD;
 // number of parents to consider in arena selection
 extern unsigned int ARENA_SIZE;
@@ -243,5 +240,4 @@ extern size_t GLOBAL_SIZE;
 extern size_t LOCAL_SIZE;
 
 extern std::string INPUT_FILE;
->>>>>>> 62ef94ee77c081845d6949f5016ee85811ede5ff
 
