@@ -336,7 +336,7 @@ void RunInfo::parseInput
         x = atoi(sub.c_str());
         stream >> sub;
         y = atoi(sub.c_str());
-        point_t coord = {x, y};
+        point_t coord = {{x, y}};
 
         node_coords[depot] = coord;
     }

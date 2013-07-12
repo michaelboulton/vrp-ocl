@@ -30,9 +30,7 @@ float OCLLearn::getBestRoute
 {
     float* min_route;
 
-    const static unsigned int results_size = GLOBAL_SIZE;
-
-    float results_host[results_size];
+    float results_host[GLOBAL_SIZE];
     float avg = 0.0;
     unsigned int jj;
 
@@ -75,7 +73,7 @@ float OCLLearn::getBestRoute
     // print out best route + length of it
     // could do on device for improved speed
     min_route = std::min_element(results_host,
-                                 results_host + results_size);
+                                 results_host + GLOBAL_SIZE);
 
     if(*min_route < best_route)
     {
@@ -109,8 +107,8 @@ float OCLLearn::getBestRoute
     }
 
     avg = std::accumulate(results_host,
-                          results_host + results_size,
-                          0.0f) / results_size;
+                          results_host + GLOBAL_SIZE,
+                          0.0f) / GLOBAL_SIZE;
 
     return avg;
 }
