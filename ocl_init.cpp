@@ -435,10 +435,14 @@ void OCLLearn::initOCL
 
 OCLLearn::OCLLearn
 (RunInfo const& run_info)
-:info(run_info),
-all_chrom_size((run_info.node_coords.size() - 1) * GLOBAL_SIZE * sizeof(int))
+:info(run_info)
 {
     srand(time(NULL));
+
+    // size in bytes of entire population is
+    std::cout << run_info.node_coords.size() << std::endl;
+    all_chrom_size = (run_info.node_coords.size() - 1)
+                     * GLOBAL_SIZE * sizeof(cl_uint);
 
     initOCL();
 

@@ -27,10 +27,10 @@ float euclideanDistance
 {
     unsigned int x1, y1, x2, y2;
 
-    x1 = first.first;
-    y1 = first.second;
-    x2 = second.first;
-    y2 = second.second;
+    x1 = first.s[0];
+    y1 = first.s[1];
+    x2 = second.s[0];
+    y2 = second.s[1];
 
     return sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
 }

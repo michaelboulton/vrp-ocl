@@ -39,8 +39,6 @@ float OCLLearn::getBestRoute
     // find fitness (length) of routes and copy back
     try
     {
-        queue.finish();
-
         fitness_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(fitness_kernel,
                                    cl::NullRange,
@@ -397,7 +395,18 @@ alg_result_t OCLLearn::run
                                            global,
                                            local);
             }
+        }
 
+        catch(cl::Error e)
+        {
+            std::cout << "\nError in sort kernel" << std::endl;
+            std::cout << e.what() << std::endl;
+            std::cout << e.err() << std::endl;
+            throw e;
+        }
+
+        try
+        {
             // set the top GLOBAL_SIZE to be the next parents
             queue.enqueueCopyBuffer(buffers.at("sorted"),
                                     buffers.at("parents"),
@@ -405,7 +414,7 @@ alg_result_t OCLLearn::run
         }
         catch(cl::Error e)
         {
-            std::cout << "\nError in sort kernel" << std::endl;
+            std::cout << "\nError in copying top" << std::endl;
             std::cout << e.what() << std::endl;
             std::cout << e.err() << std::endl;
             throw e;

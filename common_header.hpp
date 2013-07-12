@@ -45,10 +45,11 @@ class OCLLearn;
 
 //typedef std::pair<int, int> point_t;
 // essentially the same thing
-typedef struct point {
-    int first;
-    int second;
-} point_t;
+//typedef struct point {
+//    int first;
+//    int second;
+//} point_t;
+typedef cl_uint2 point_t;
 
 // index of 2 points and the distance between them
 typedef struct point_info {
@@ -126,7 +127,7 @@ private:
     cl_knl_t fe_kernel;
 
     // size in bytes of all the chromosomes
-    const size_t all_chrom_size;
+    size_t all_chrom_size;
 
     // work sizes
     cl::NDRange global;
