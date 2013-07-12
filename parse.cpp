@@ -59,8 +59,9 @@ void parseArgs
         {"mutstrat", required_argument, 0, 'm'},
         {"num_trucks", required_argument, 0, 'n'},
         {"per_population", required_argument, 0, 'p'},
-        {"MUTRATE", required_argument, 0, 'r'},
+        {"mutrate", required_argument, 0, 'r'},
         {"stops_per_route", required_argument, 0, 's'},
+        {"type", required_argument, 0, 't'},
         {"verbose", no_argument, 0, 'v'},
         {0, 0, 0, 0}
     };
@@ -80,6 +81,7 @@ void parseArgs
         "Population size - size per population in the total number of populations",
         "Mutation rate - percentage chance of a chromosome being mutated",
         "Stops per route - number of stops before route creation will go back to depot",
+        "Device type - CPU, GPU, ACCELERATOR",
         "Verbose mode"
     };
 
@@ -100,7 +102,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:c:e:f:g:hi:m:n:p:r:s:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:c:e:f:g:hi:m:n:p:r:s:t:v",
                                    long_options, &option_index)))
         {
             break;
@@ -191,6 +193,37 @@ void parseArgs
                 fprintf(stderr,
                         "Unknown mutation strategy '%s' passed to -m\n",
                         optarg);
+                fprintf(stderr,
+                        "Valid options are REVERSE and SWAP\n");
+                exit(1);
+            }
+            break;
+
+        case 't':
+            read_arg = std::string(optarg);
+            std::transform(read_arg.begin(),
+                           read_arg.end(),
+                           read_arg.begin(),
+                           toupper);
+            if (std::string::npos != read_arg.find("CPU"))
+            {
+                DEVICE_TYPE=CL_DEVICE_TYPE_CPU;
+            }
+            else if (std::string::npos != read_arg.find("GPU"))
+            {
+                DEVICE_TYPE=CL_DEVICE_TYPE_GPU;
+            }
+            else if (std::string::npos != read_arg.find("ACCELERATOR"))
+            {
+                DEVICE_TYPE=CL_DEVICE_TYPE_ACCELERATOR;
+            }
+            else
+            {
+                fprintf(stderr,
+                        "Unknown device type '%s' passed to -t\n",
+                        optarg);
+                fprintf(stderr,
+                        "Valid options are CPU, GPU, and ACCELERATOR\n");
                 exit(1);
             }
             break;

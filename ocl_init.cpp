@@ -102,7 +102,7 @@ void OCLLearn::initOCL
         {
             platforms.at(ii).getInfo(CL_PLATFORM_NAME, &plat_info);
             #ifdef VERBOSE
-            std::cout << plat_info << std::endl;
+            std::cout << plat_info;
             #endif
 
             cl_context_properties properties[3] = {CL_CONTEXT_PLATFORM,
@@ -111,6 +111,7 @@ void OCLLearn::initOCL
             context = cl::Context(DEVICE_TYPE, properties);
             devices = context.getInfo<CL_CONTEXT_DEVICES>();
 
+            std::cout << std::endl;
             break;
         }
         catch(cl::Error e)
@@ -130,16 +131,19 @@ void OCLLearn::initOCL
         }
     }
 
-    if(devices.size() > 1)
+    switch (devices.size())
     {
-        device = devices.at(1);
-        queue = cl::CommandQueue(context, device);
-    }
-    else
-    {
+    // for a specific machine with 2 GPUs in
+    case 1:
         device = devices.at(0);
-        queue = cl::CommandQueue(context, device);
+        break;
+    case 0:
+        std::cout << "No devices of specified type found" << std::endl;
+        exit(1);
+    default:
+        device = devices.at(0);
     }
+    queue = cl::CommandQueue(context, device);
 
     /****   options   *******/
 

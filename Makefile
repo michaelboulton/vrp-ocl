@@ -1,4 +1,4 @@
-CXXFLAGS=-O2 -g -ansi -pedantic -Wall -Wno-unused-variable
+CXXFLAGS=-O2 -g -std=c++98 -pedantic -Wall -Wno-unused-variable
 LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
@@ -10,9 +10,9 @@ VERB=-DVERBOSE
 BLOCKING=-DBLOCK_CALLS
 
 #-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
--DNUM_ITER=$(NUM_ITER) \
--DGLOBAL_SIZE=$(GLOBAL_SIZE) \
--DGROUP_SIZE=$(GROUP_SIZE) \
+ -DNUM_ITER=$(NUM_ITER) \
+ -DGLOBAL_SIZE=$(GLOBAL_SIZE) \
+ -DGROUP_SIZE=$(GROUP_SIZE) \
 
 FILES=\
 	ocl_init.o \
@@ -28,7 +28,7 @@ OUTFILE=vrp-ocl
 $(OUTFILE): Makefile link
 
 link: $(FILES)
-	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDFLAGS) $(LDLIBS)
 
 %.o: %.cpp Makefile common_header.hpp
 	$(CXX) $(CXXFLAGS) \
