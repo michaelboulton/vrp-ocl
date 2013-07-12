@@ -156,5 +156,5 @@ const static int MIN_CAPACITY = 5;
 // % chance of taking a pair when making initial routes
 // too high and GA does nothing, too low and GA doesnt converge
 // 95 seems good - not deterministic, but produces good initial results
-const static int RAND_THRESHOLD = 80;
+const static int RAND_THRESHOLD = 95;
 

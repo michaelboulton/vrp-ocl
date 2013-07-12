@@ -21,7 +21,7 @@ OUTFILE=out.exe
 $(OUTFILE): Makefile link
 
 link: $(FILES)
-	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDLIBS)
+	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDFLAGS) $(LDLIBS)
 
 %.o: %.cpp Makefile common_header.hpp
 	$(CXX) $(CXXFLAGS) \
