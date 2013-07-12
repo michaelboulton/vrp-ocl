@@ -1,8 +1,32 @@
+/*
+ *  Copyright (c) 2013 Michael Boulton
+ *  
+ *  Permission is hereby granted, free of charge, to any person obtaining a copy
+ *  of this software and associated documentation files (the "Software"), to deal
+ *  in the Software without restriction, including without limitation the rights
+ *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *  copies of the Software, and to permit persons to whom the Software is
+ *  furnished to do so, subject to the following conditions:
+ *  
+ *  The above copyright notice and this permission notice shall be included in
+ *  all copies or substantial portions of the Software.
+ *  
+ *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ *  THE SOFTWARE.
+ */
+
 #include "common_header.hpp"
-#include "omp.h"
+
+extern "C" double MPI_Wtime();
 
 float OCLLearn::getBestRoute
-(float& best_route, route_vec_t& best_chromosome, unsigned int ii)
+(float& best_route, route_vec_t& best_chromosome,
+ unsigned int ii)
 {
     float* min_route;
 
@@ -19,13 +43,15 @@ float OCLLearn::getBestRoute
 
         fitness_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(fitness_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         queue.finish();
     }
     catch(cl::Error e)
     {
-        std::cout << "\nError in fitness kernel" << std::endl;
+        std::cout << "\nError in evaluating for copying back" << std::endl;
         std::cout << e.what() << std::endl;
         std::cout << e.err() << std::endl;
         throw e;
@@ -34,9 +60,9 @@ float OCLLearn::getBestRoute
     try
     {
         queue.enqueueReadBuffer(buffers.at("results"),
-            CL_TRUE, 0,
-            sizeof(float) * GLOBAL_SIZE,
-            results_host);
+                                CL_TRUE, 0,
+                                sizeof(float) * GLOBAL_SIZE,
+                                results_host);
 
         queue.finish();
     }
@@ -51,7 +77,7 @@ float OCLLearn::getBestRoute
     // print out best route + length of it
     // could do on device for improved speed
     min_route = std::min_element(results_host,
-        results_host + results_size);
+                                 results_host + results_size);
 
     if(*min_route < best_route)
     {
@@ -62,12 +88,12 @@ float OCLLearn::getBestRoute
         uint load_from = min_route - results_host;
 
         queue.enqueueReadBuffer(buffers.at("parents"), CL_TRUE,
-            // position in chromosome
-            load_from
-            // size of 1 chromosome
-            * (all_chrom_size / GLOBAL_SIZE),
-            (all_chrom_size / GLOBAL_SIZE),
-            &best_chromosome.at(0));
+                                // position in chromosome
+                                load_from *
+                                // size of 1 chromosome
+                                (all_chrom_size / GLOBAL_SIZE),
+                                (all_chrom_size / GLOBAL_SIZE),
+                                &best_chromosome.at(0));
 
         #ifdef VERBOSE
         std::cout << std::endl;
@@ -85,7 +111,8 @@ float OCLLearn::getBestRoute
     }
 
     avg = std::accumulate(results_host,
-        results_host + results_size, 0.0f)/(results_size);
+                          results_host + results_size,
+                          0.0f) / results_size;
 
     return avg;
 }
@@ -96,15 +123,16 @@ alg_result_t OCLLearn::run
     unsigned int ii, lb, ub;
     double t_0, t_1;
 
-    cl::NDRange doub_local(GROUP_SIZE * 2);
+    cl::NDRange doub_local(LOCAL_SIZE * 2);
     cl::NDRange doub_global(GLOBAL_SIZE * 2);
 
-    t_0 = omp_get_wtime();
+    t_0 = MPI_Wtime();
 
     // all valid routes created
     std::vector<route_vec_t> all_routes;
 
     genChromosomes(all_routes);
+
     #if 0
     // can't randomise because number of trucks is not guarnateeable
     route_vec_t r(node_coords.size());
@@ -154,7 +182,6 @@ alg_result_t OCLLearn::run
         {
             // check to see what the maximum work group size is for all kernels
             int max_sizes[7];
-            ii = 0;
             #define CHECK_SIZE(knl, idx) \
             cl::detail::errHandler( \
                 clGetKernelWorkGroupInfo(knl(), \
@@ -178,7 +205,7 @@ alg_result_t OCLLearn::run
             local = cl::NDRange(max_wg_sz/2);
             doub_local = cl::NDRange(max_wg_sz);
 
-            std::cout << "Overriding work group size of " << GROUP_SIZE;
+            std::cout << "Overriding work group size of " << LOCAL_SIZE;
             std::cout << " with work group size of " << max_wg_sz << std::endl;
         }
         else
@@ -196,23 +223,28 @@ alg_result_t OCLLearn::run
         // TSP
         TSP_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(TSP_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // fitness
         fitness_kernel.setArg(0, buffers.at("parents"));
         queue.enqueueNDRangeKernel(fitness_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // sort - always do no elitist on first round
         ne_sort_kernel.setArg(1, buffers.at("parents"));
         queue.enqueueNDRangeKernel(ne_sort_kernel,
-            cl::NullRange, global, local);
+                                   cl::NullRange,
+                                   global,
+                                   local);
 
         // set the top GLOBAL_SIZE to be the next parents
-        queue.enqueueCopyBuffer(
-            buffers.at("sorted"),
-            buffers.at("parents"),
-            0, 0, all_chrom_size);
+        queue.enqueueCopyBuffer(buffers.at("sorted"),
+                                buffers.at("parents"),
+                                0, 0, all_chrom_size);
     }
     catch(cl::Error e)
     {
@@ -224,11 +256,11 @@ alg_result_t OCLLearn::run
 
     /********************/
 
-    for(ii = 1; ii < NUM_ITER + 1; ii++)
+    for(ii = 1; ii < GENERATIONS + 1; ii++)
     {
         #ifdef VERBOSE
         std::cout << "\rNow on iteration " << ii << "/";
-        std::cout << NUM_ITER << " " << std::flush;
+        std::cout << GENERATIONS << " " << std::flush;
         #endif
         /*
         *   algo
@@ -248,7 +280,9 @@ alg_result_t OCLLearn::run
         {
             // swap best chromosome in each workgroup with another one
             queue.enqueueNDRangeKernel(fe_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -261,12 +295,12 @@ alg_result_t OCLLearn::run
         /********************/
 
         // upper bounds and lower bounds for mutation
-        lb = (rand() % (node_coords.size() - 3)) + 1;
-        ub = (rand() % (node_coords.size() - lb - 2)) + lb + 1;
+        lb = (rand() % (info.node_coords.size() - 3)) + 1;
+        ub = (rand() % (info.node_coords.size() - lb - 2)) + lb + 1;
         // make sure they are sane numbers
         if(lb == ub 
-        ||lb < 1 || lb > node_coords.size()-2
-        ||ub < 1 || ub > node_coords.size()-2)
+        ||lb < 1 || lb > info.node_coords.size()-2
+        ||ub < 1 || ub > info.node_coords.size()-2)
         {
             std::cout << std::endl;
             std::cout << lb << " " << ub;
@@ -280,7 +314,9 @@ alg_result_t OCLLearn::run
             crossover_kernel.setArg(7, lb);
             crossover_kernel.setArg(8, ub);
             queue.enqueueNDRangeKernel(crossover_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -298,7 +334,9 @@ alg_result_t OCLLearn::run
             // TSP
             TSP_kernel.setArg(0, buffers.at("children"));
             queue.enqueueNDRangeKernel(TSP_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -315,7 +353,9 @@ alg_result_t OCLLearn::run
         {
             fitness_kernel.setArg(0, buffers.at("children"));
             queue.enqueueNDRangeKernel(fitness_kernel,
-                cl::NullRange, global, local);
+                                       cl::NullRange,
+                                       global,
+                                       local);
         }
         catch(cl::Error e)
         {
@@ -339,24 +379,29 @@ alg_result_t OCLLearn::run
                 // second half of results contains
                 fitness_kernel.setArg(0, buffers.at("parents"));
                 queue.enqueueNDRangeKernel(fitness_kernel,
-                    fitness_offset, global, local);
+                                           fitness_offset,
+                                           global,
+                                           local);
 
                 // needs doulbe the local range for sorting
                 queue.enqueueNDRangeKernel(e_sort_kernel,
-                    cl::NullRange, doub_global, doub_local);
+                                           cl::NullRange,
+                                           doub_global,
+                                           doub_local);
             }
             else
             {
                 ne_sort_kernel.setArg(1, buffers.at("children"));
                 queue.enqueueNDRangeKernel(ne_sort_kernel,
-                    cl::NullRange, global, local);
+                                           cl::NullRange,
+                                           global,
+                                           local);
             }
 
             // set the top GLOBAL_SIZE to be the next parents
-            queue.enqueueCopyBuffer(
-                buffers.at("sorted"),
-                buffers.at("parents"),
-                0, 0, all_chrom_size);
+            queue.enqueueCopyBuffer(buffers.at("sorted"),
+                                    buffers.at("parents"),
+                                    0, 0, all_chrom_size);
         }
         catch(cl::Error e)
         {
@@ -373,34 +418,12 @@ alg_result_t OCLLearn::run
     }
 
     queue.finish();
-    t_1 = omp_get_wtime();
+    t_1 = MPI_Wtime();
     #ifdef VERBOSE
     std::cout << std::endl;
     std::cout << "took " << t_1-t_0 << " secs" << std::endl;
     #endif
 
     return std::pair<float, route_vec_t>(best_route, best_chromosome);
-}
-
-OCLLearn::OCLLearn
-(RunInfo const& run_info, int dt)
-: node_coords(run_info.node_coords),
-node_demands(run_info.node_demands),
-CWS_pair_list(run_info.CWS_pair_list),
-capacity(run_info.capacity),
-DT(dt),
-all_chrom_size((node_coords.size() - 1) * GLOBAL_SIZE * sizeof(int))
-{
-    srand(time(NULL));
-
-    initOCL();
-
-    all_stops = route_vec_t(node_coords.size(), 0);
-
-    unsigned int ii;
-    for (ii = 0; ii < node_coords.size(); ii++)
-    {
-        all_stops.at(ii) = ii;
-    }
 }
 
