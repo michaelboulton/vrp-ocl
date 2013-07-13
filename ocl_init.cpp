@@ -134,7 +134,6 @@ void OCLLearn::initOCL
 
     switch (devices.size())
     {
-    // for a specific machine with 2 GPUs in
     case 1:
         device = devices.at(0);
         break;
@@ -154,7 +153,7 @@ void OCLLearn::initOCL
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
     // FIXME only works on CPU with this on
-    options << "-cl-opt-disable ";
+    //options << "-cl-opt-disable ";
 
     // disable testing values
     options << "-DNOTEST ";
