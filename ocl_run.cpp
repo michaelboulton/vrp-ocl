@@ -312,13 +312,14 @@ alg_result_t OCLLearn::run
         #endif
         /*
         *   algo
-        *   1.  do TSP on routes
-        *   2.  sort parents by fitness
-        *   3.  breed
+        *   1.  do foreign exchange
+        *   2.  breed
+        *   3.  mutate
         *   4.  TSP
         *   5.  sort all by fitness, elitist or non elitist
         *   6.  copy best back into parents, discard the rest
-        *   7.  goto 2
+        *   7.  sort parents by fitness
+        *   8.  goto 2
         */
 
         /********************/
@@ -326,23 +327,7 @@ alg_result_t OCLLearn::run
         // do foreign exchange
         ENQUEUE(fe_kernel)
 
-        // upper bounds and lower bounds for mutation
-        lb = (rand() % (info.node_coords.size() - 3)) + 1;
-        ub = (rand() % (info.node_coords.size() - lb - 2)) + lb + 1;
-        // make sure they are sane numbers
-        if(lb == ub 
-        ||lb < 1 || lb > info.node_coords.size()-2
-        ||ub < 1 || ub > info.node_coords.size()-2)
-        {
-            std::cout << std::endl;
-            std::cout << lb << " " << ub;
-            std::cout << std::endl;
-            exit(1);
-        }
-
         // do crossover
-        crossover_kernel.setArg(7, lb);
-        crossover_kernel.setArg(8, ub);
         ENQUEUE(crossover_kernel)
 
         ENQUEUE(mutate_kernel);
@@ -353,8 +338,7 @@ alg_result_t OCLLearn::run
         fitness_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(fitness_kernel)
 
-        // sort all chromosomes based on elitism
-        // if not elitist, only sort children
+        // sort all chromosomes based on elitism choice
         if(ELITIST == sort_strategy)
         {
             static cl::NDRange fitness_offset(GLOBAL_SIZE);
@@ -376,6 +360,7 @@ alg_result_t OCLLearn::run
         }
         else
         {
+            // if not elitist, only sort children
             ne_sort_kernel.setArg(1, buffers.at("children"));
             ENQUEUE(ne_sort_kernel)
         }
