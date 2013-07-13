@@ -49,7 +49,7 @@ typedef struct point_info {
  *  Random number generator
  *  source: http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
  */
-uint MWC64X(__global uint2* const state)
+inline uint MWC64X(__global uint2* const state)
 {
     enum _dummy { A=4294883355U };
     //unsigned int A = 4294883355U ;
@@ -67,7 +67,8 @@ uint MWC64X(__global uint2* const state)
 /*
  *  Returns euclidean distance between two points
  */
-float euclideanDistance
+#if 0
+inline float euclideanDistance
 (uint2 first, uint2 second)
 {
     /*
@@ -87,13 +88,18 @@ float euclideanDistance
 
     return fast_distance(convert_float2(first), convert_float2(second));
 }
+#else
+#define euclideanDistance(first,second)     \
+    (fast_distance(convert_float2(first),   \
+                   convert_float2(second)))
+#endif
 
 /*
  *  Returns how long a subroute is
  */
 float subrouteLength
-(uint* const __restrict route,
- int route_stops,
+(                 uint*  const __restrict route,
+            const int                     route_stops,
  __constant const uint2* const __restrict node_coords)
 {
     uint ii;
@@ -134,32 +140,32 @@ void findRouteStarts
     // counters
     uint ii, rr;
 
+    // stuff currently in truck - 0 at first
     uint cur_capacity = 0;
-
-    // increment pointers to point to this thread's chromosome values
-    chromosomes  += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-    route_starts += LOCAL_SIZE * NUM_SUBROUTES  * group_id + loc_id * NUM_SUBROUTES;
 
     // stops in current route - initially 0
     uint stops_taken = 0;
 
-    // stuff currently in truck - 0 at first
-    cur_capacity = 0;
+    // increment pointers to point to this thread's chromosome values
+    chromosomes  += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
+    route_starts += LOCAL_SIZE * NUM_SUBROUTES  * group_id + loc_id * NUM_SUBROUTES;
 
     for(ii = 0; ii < NUM_SUBROUTES; ii++)
     {
         route_starts[ii] = 0;
     }
 
+    // start at route_starts[1]
     rr = 1;
 
+    // for the total length of the chromosome
     for(ii = 0; ii < NUM_NODES; ii++)
     {
         // ignore depot stops - go back to depot when its full / too many things in route
-        while(chromosomes[ii] == 1)
+        while(DEPOT_NODE == chromosomes[ii])
         {
-            ii++;
-            if(ii >= NUM_NODES) break;
+            //ii++;
+            if(++ii >= NUM_NODES) break;
         }
 
         cur_capacity += node_demands[chromosomes[ii]];
@@ -175,7 +181,7 @@ void findRouteStarts
     }
 
     // route_starts[0] contains number of sub routes
-    // route_starts[1] always contains 0 - the start of the first route
+    // route_starts[1] always contains 1 - the start of the first route
     route_starts[0] = rr;
 }
 
@@ -458,7 +464,8 @@ __kernel void cx
     // randomly choose
     uint other_parent, counter = 0, tmp_rand;
 
-    #ifdef ARENA_SIZE
+    // use only if its value is set, otherwise just choose randomly
+    #if (defined(ARENA_SIZE) && ARENA_SIZE)
     // choose one of the top ones based on a random choice
     do
     {
@@ -559,12 +566,11 @@ __kernel void cx
 
             // increment cycle number
             cc++;
-            //if(cc>6)break;
         }
         else
         {
+            // mark the next cycle start
             vis_mask[next_idx] = 1;
-
             target = parent_2[next_idx];
         }
     }

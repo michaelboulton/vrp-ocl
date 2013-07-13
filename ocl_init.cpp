@@ -148,11 +148,12 @@ void OCLLearn::initOCL
     /****   options   *******/
 
     std::stringstream options;
-    options << "-cl-fast-relaxed-math ";
+    //options << "-cl-fast-relaxed-math ";
     //options << "-cl-strict-aliasing ";
-    options << "-cl-mad-enable ";
-    options << "-cl-no-signed-zeros ";
-    //options << "-cl-opt-disable ";
+    //options << "-cl-mad-enable ";
+    //options << "-cl-no-signed-zeros ";
+    // FIXME only works on CPU with this on?
+    options << "-cl-opt-disable ";
 
     // disable testing values
     options << "-DNOTEST ";
@@ -166,12 +167,7 @@ void OCLLearn::initOCL
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";
     options << "-DDEPOT_NODE=" << info.depot_node << " ";
-
-    // use only if its value is set, otherwise just choose randomly
-    if (0 != ARENA_SIZE)
-    {
-        options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
-    }
+    options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
 
     // mutation rate
     options << "-DMUT_RATE=" << MUTRATE << " ";

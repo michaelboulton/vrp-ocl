@@ -394,7 +394,6 @@ alg_result_t OCLLearn::run
                                            local);
             }
         }
-
         catch(cl::Error e)
         {
             std::cout << "\nError in sort kernel" << std::endl;
@@ -403,12 +402,25 @@ alg_result_t OCLLearn::run
             throw e;
         }
 
+getBestRoute(best_route, best_chromosome, 0);
+
         try
         {
             // set the top GLOBAL_SIZE to be the next parents
             queue.enqueueCopyBuffer(buffers.at("sorted"),
                                     buffers.at("parents"),
                                     0, 0, all_chrom_size);
+            /*
+            clEnqueueCopyBuffer(queue(),
+                                buffers.at("sorted")(),
+                                buffers.at("parents")(),
+                                0,
+                                0,
+                                all_chrom_size,
+                                0,
+                                NULL,
+                                NULL);
+            */
         }
         catch(cl::Error e)
         {
