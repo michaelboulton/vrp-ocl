@@ -306,17 +306,13 @@ void OCLLearn::initOCL
     // TSP kernel
     try
     {
-        if(tsp_strategy == DJ)
-        {
-            TSP_kernel = cl_knl_t(all_program, "djikstra");
-        }
-        else if(tsp_strategy == SIMPLE)
+        if(tsp_strategy == SIMPLE || tsp_strategy == NONE)
         {
             TSP_kernel = cl_knl_t(all_program, "simpleTSP");
         }
-        else if(tsp_strategy == NONE)
+        else if(tsp_strategy == DJ)
         {
-            TSP_kernel = cl_knl_t(all_program, "noneTSP");
+            TSP_kernel = cl_knl_t(all_program, "djikstra");
         }
         else
         {

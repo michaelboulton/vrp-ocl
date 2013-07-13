@@ -71,7 +71,7 @@ void parseArgs
     {
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
-        "Selection strategy - whether to keep the best of parents and children (ELITIST) or just the children (NONELITIST)",
+        "Selection strategy - whether to keep the best of parents and children (YESELITIST) or just the children (NONELITIST)",
         "Input file - which file to read input from",
         "Total size - how many chromosomes in total in all populations",
         "Print help",
@@ -134,7 +134,8 @@ void parseArgs
                            read_arg.end(),
                            read_arg.begin(),
                            toupper);
-            if (std::string::npos != read_arg.find("ELITIST"))
+            // TODO change to a more sensible name
+            if (std::string::npos != read_arg.find("YESELITIST"))
             {
                 sort_strategy = ELITIST;
             }

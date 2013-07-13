@@ -33,18 +33,13 @@
 #define K_OPT 2
 #endif
 
+// for sorting kernels
 typedef struct sort_info {
     // length of route - used to compare
     float route_length;
     // index of route in parent/children (could be either)
     __global const uint* idx;
 } sort_t;
-
-typedef struct point_info {
-    int first_index;
-    int second_index;
-    float distance;
-} point_info_t ;
 
 /*
  *  Random number generator
@@ -186,13 +181,24 @@ void findRouteStarts
     route_starts[0] = rr;
 }
 
-float totalRouteLength
-(__global   const uint*  const __restrict chromosome,
- __constant const uint2* const __restrict node_coords,
- __constant const uint*  const __restrict node_demands)
+/************************/
+
+__kernel void fitness
+(__global   const uint *          __restrict chromosomes,
+ __global         float *   const __restrict results,
+ __constant const uint2 *   const __restrict node_coords,
+ __constant const uint*     const __restrict node_demands,
+ __global         int *           __restrict route_starts)
 {
-    uint ii;
-    uint jj;
+    const uint glob_id = get_global_id(0);
+    const uint loc_id = get_local_id(0);
+    const uint group_id = get_group_id(0);
+
+    // offset to this work item
+    __global const uint* const chromosome = 
+        chromosomes + LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+
+    uint ii, jj;
 
     uint cur_capacity = 0;
     // for calculating length of route
@@ -206,6 +212,7 @@ float totalRouteLength
     // stops in current route
     uint stops_taken = 1;
 
+    // TODO change this to use route_starts instead of doing it again
     for(ii = 0, jj = 1;
     ii < NUM_NODES - 1 && jj < NUM_NODES;
     ii++, jj++)
@@ -236,28 +243,8 @@ float totalRouteLength
     total_distance += euclideanDistance(node_coords[chromosome[NUM_NODES - 1]],
                                         node_coords[DEPOT_NODE]);
 
-    return total_distance;
-}
 
-/************************/
-
-__kernel void fitness
-(__global   const uint *          __restrict chromosomes,
- __global         float *   const __restrict results,
- __constant const uint2 *   const __restrict node_coords,
- __constant const uint*     const __restrict node_demands,
- __global         int *           __restrict route_starts)
-{
-    const uint glob_id = get_global_id(0);
-    const uint loc_id = get_local_id(0);
-    const uint group_id = get_group_id(0);
-
-    // offset to this work item
-    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
-
-    results[glob_id] = totalRouteLength(chromosomes,
-                                        node_coords,
-                                        node_demands);
+    results[glob_id] = total_distance;
 }
 
 /*
@@ -270,22 +257,23 @@ __kernel void ParallelBitonic_NonElitist
  __global const uint *  __restrict chromosomes,
  __global       uint *  __restrict output)
 {
-    int ii = get_local_id(0); // index in workgroup
+    int ii = get_local_id(0);
     int group_id = get_group_id(0) ;
     int loc_id = get_local_id(0) ;
 
+    // need to be twice the group size because this works on twice the range
     __local sort_t aux[LOCAL_SIZE * 2];
 
     route_lengths += group_id * LOCAL_SIZE;
+    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+    output      += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
     sort_t sort_pair;
-    // need to be twice the group size because this works on twice the range
     sort_pair.route_length = route_lengths[loc_id];
-    // idx is the location of the current chromosome, relative to beginning of work group
-    sort_pair.idx = chromosomes + LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-    aux[loc_id] = sort_pair;
+    // idx is a pointer to the relevant chromosome
+    sort_pair.idx = chromosomes;
 
     // Load block in AUX[WG]
     aux[ii] = sort_pair;
@@ -314,15 +302,19 @@ __kernel void ParallelBitonic_NonElitist
 
     uint kk;
 
-    output += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
+    /*
+    *   FIXME
+    *   output is not getting written properly which causes it to try and access
+    *   parents/children [24432] or something later down the line, which causes
+    *   a seg fault?
+    */
     __global const uint* input = aux[loc_id].idx;
     for(kk = 0; kk < NUM_NODES; kk++)
     {
         output[kk] = input[kk];
     }
 
-    route_lengths += LOCAL_SIZE * group_id + loc_id;
-    route_lengths[0] = aux[loc_id].route_length;
+    route_lengths[loc_id] = aux[loc_id].route_length;
 }
 
 __kernel void ParallelBitonic_Elitist
@@ -340,7 +332,7 @@ __kernel void ParallelBitonic_Elitist
 
     // offset to this work group
     route_lengths += group_id * LOCAL_SIZE;
-    return;
+    output += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
@@ -390,15 +382,13 @@ __kernel void ParallelBitonic_Elitist
     // copy back only the first half
     if(loc_id < LOCAL_SIZE)
     {
-        output += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
         __global const uint* input = aux[loc_id].idx;
         for(ii = 0; ii < NUM_NODES; ii++)
         {
             output[ii] = input[ii];
         }
 
-        route_lengths += LOCAL_SIZE * group_id + loc_id;
-        route_lengths[0] = aux[loc_id].route_length;
+        route_lengths[loc_id] = aux[loc_id].route_length;
     }
 }
 
@@ -660,7 +650,7 @@ __kernel void simpleTSP
                     route_starts);
 
     // offset
-    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+    chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
     route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
 
     // copy chromosome into private memory

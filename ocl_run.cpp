@@ -107,7 +107,8 @@ const cl::NDRange local_range)
         fprintf(stderr, "@@@@@@@@@@@@@@@@@@@@\n");
         fflush(stderr);
 
-        exit(e.err());
+        //exit(e.err());
+        throw e;
     }
 }
 
@@ -122,32 +123,17 @@ float OCLLearn::getBestRoute
     unsigned int jj;
 
     // find fitness (length) of routes and copy back
+    fitness_kernel.setArg(0, buffers.at("parents"));
+    ENQUEUE(fitness_kernel);
+
     try
     {
-        fitness_kernel.setArg(0, buffers.at("parents"));
-        queue.enqueueNDRangeKernel(fitness_kernel,
-                                   cl::NullRange,
-                                   global,
-                                   local);
-
         queue.finish();
-    }
-    catch(cl::Error e)
-    {
-        std::cout << "\nError in evaluating for copying back" << std::endl;
-        std::cout << e.what() << std::endl;
-        std::cout << e.err() << std::endl;
-        throw e;
-    }
-
-    try
-    {
         queue.enqueueReadBuffer(buffers.at("results"),
                                 CL_TRUE, 0,
                                 sizeof(float) * GLOBAL_SIZE,
                                 results_host);
 
-        queue.finish();
     }
     catch(cl::Error e)
     {
@@ -173,8 +159,8 @@ float OCLLearn::getBestRoute
         queue.enqueueReadBuffer(buffers.at("parents"), CL_TRUE,
                                 // position in chromosome
                                 load_from *
-                                // size of 1 chromosome
-                                (all_chrom_size / GLOBAL_SIZE),
+                                    // size of 1 chromosome
+                                    (all_chrom_size / GLOBAL_SIZE),
                                 (all_chrom_size / GLOBAL_SIZE),
                                 &best_chromosome.at(0));
 
@@ -214,22 +200,8 @@ alg_result_t OCLLearn::run
     // all valid routes created
     std::vector<route_vec_t> all_routes;
 
+    // generate a load of random routes
     genChromosomes(all_routes);
-
-    #if 0
-    // can't randomise because number of trucks is not guarnateeable
-    route_vec_t r(node_coords.size());
-    for (ii = 0; ii < r.size(); ii++)
-    {
-        r[ii] = ii+1;
-    }
-    all_routes = std::vector<route_vec_t>(GLOBAL_SIZE, r);
-    for (ii = 0; ii < GLOBAL_SIZE; ii++)
-    {
-        std::random_shuffle(all_routes[ii].begin(),
-                            all_routes[ii].end());
-    }
-    #endif
 
     std::random_shuffle(all_routes.begin(), all_routes.end());
     #ifdef VERBOSE
@@ -290,6 +262,8 @@ alg_result_t OCLLearn::run
 
             std::cout << "Overriding work group size of " << LOCAL_SIZE;
             std::cout << " with work group size of " << max_wg_sz << std::endl;
+
+            ENQUEUE(fitness_kernel)
         }
         else
         {
@@ -301,23 +275,21 @@ alg_result_t OCLLearn::run
     }
 
     // do initial TSP and sort in preparation for breeding
-    if (NONE != tsp_strategy)
-    {
-        TSP_kernel.setArg(0, buffers.at("parents"));
-        ENQUEUE(TSP_kernel)
-    }
+    TSP_kernel.setArg(0, buffers.at("parents"));
+    ENQUEUE(TSP_kernel)
 
     // fitness
     fitness_kernel.setArg(0, buffers.at("parents"));
     ENQUEUE(fitness_kernel)
 
-    // sort - always do no elitist on first round
+    // sort - always do no elitist on first round because there are no children
     ne_sort_kernel.setArg(1, buffers.at("parents"));
     ENQUEUE(ne_sort_kernel)
 
     try
     {
         // set the top GLOBAL_SIZE to be the next parents
+        queue.finish();
         queue.enqueueCopyBuffer(buffers.at("sorted"),
                                 buffers.at("parents"),
                                 0, 0, all_chrom_size);
@@ -409,6 +381,7 @@ alg_result_t OCLLearn::run
         try
         {
             // set the top GLOBAL_SIZE to be the next parents
+            queue.finish();
             queue.enqueueCopyBuffer(buffers.at("sorted"),
                                     buffers.at("parents"),
                                     0, 0, all_chrom_size);
