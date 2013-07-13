@@ -260,20 +260,17 @@ __kernel void ParallelBitonic_NonElitist
     int ii = get_local_id(0);
     int group_id = get_group_id(0) ;
     int loc_id = get_local_id(0) ;
+    int glob_id = get_global_id(0) ;
 
     // need to be twice the group size because this works on twice the range
     __local sort_t aux[LOCAL_SIZE * 2];
 
-    route_lengths += group_id * LOCAL_SIZE;
-    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
-    output      += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
     sort_t sort_pair;
-    sort_pair.route_length = route_lengths[loc_id];
+    sort_pair.route_length = route_lengths[glob_id];
     // idx is a pointer to the relevant chromosome
-    sort_pair.idx = chromosomes;
+    sort_pair.idx = chromosomes + LOCAL_SIZE*group_id*NUM_NODES + loc_id*NUM_NODES;
 
     // Load block in AUX[WG]
     aux[ii] = sort_pair;
@@ -297,24 +294,20 @@ __kernel void ParallelBitonic_NonElitist
             barrier(CLK_LOCAL_MEM_FENCE);
             aux[ii] = (swap)?jData:iData;
             barrier(CLK_LOCAL_MEM_FENCE);
+            #undef getKey
         }
     }
 
     uint kk;
+    output += LOCAL_SIZE*group_id*NUM_NODES + loc_id*NUM_NODES;
 
-    /*
-    *   FIXME
-    *   output is not getting written properly which causes it to try and access
-    *   parents/children [24432] or something later down the line, which causes
-    *   a seg fault?
-    */
     __global const uint* input = aux[loc_id].idx;
     for(kk = 0; kk < NUM_NODES; kk++)
     {
         output[kk] = input[kk];
     }
 
-    route_lengths[loc_id] = aux[loc_id].route_length;
+    route_lengths[glob_id] = aux[loc_id].route_length;
 }
 
 __kernel void ParallelBitonic_Elitist
@@ -339,7 +332,7 @@ __kernel void ParallelBitonic_Elitist
     sort_t sort_pair;
 
     // if an even item in the work group
-    if(loc_id % 2 == 0)
+    if(loc_id > LOCAL_SIZE)
     {
         // then use this to access children
         loc_div = loc_id / 2;
@@ -349,7 +342,7 @@ __kernel void ParallelBitonic_Elitist
     else
     {
         // then use this to access parents
-        loc_div = (loc_id - 1) / 2;
+        loc_div = loc_id / 2;
         sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
@@ -376,6 +369,7 @@ __kernel void ParallelBitonic_Elitist
             barrier(CLK_LOCAL_MEM_FENCE);
             aux[ii] = (swap)?jData:iData;
             barrier(CLK_LOCAL_MEM_FENCE);
+            #undef getKey
         }
     }
 
@@ -399,8 +393,7 @@ __kernel void cx
  __global       int *          __restrict route_starts,
  __constant     uint2*   const __restrict node_coords,
  __constant     uint*    const __restrict node_demands,
- __global       uint2*   const __restrict state,
- unsigned int lower_bound, unsigned int upper_bound)
+ __global       uint2*   const __restrict state)
 {
     uint glob_id = get_global_id(0);
     uint group_id = get_group_id(0);
@@ -452,7 +445,17 @@ __kernel void cx
     }
 
     // beginning of first cycle
-    uint target = lower_bound;
+    uint target;
+    /*
+    *   FIXME
+    *   This is being used both in the cycles mask thing to see which ones have
+    *   been used as well as checking the nodes, but one is 2-based and the
+    *   other is 0-based
+    *
+    *   First choice is different in that it can be any element - does just
+    *   fixing it here make it work?
+    */
+    target = 1 + MWC64X(&state[glob_id]) % (NUM_NODES - 1);
 
     // next index in loop
     uint next_idx;
@@ -549,11 +552,38 @@ __kernel void cx
         parent_flip = !parent_flip;
     }
 
+    // increment children to point to this threads chromosome child
+    children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
+
+    // copy into children
+    for(ii = 0; ii < NUM_NODES; ii++)
+    {
+        children[ii] = child[ii];
+    }
+}
+
+__kernel void mutate
+(__global       uint  *       __restrict chromosomes,
+ __global       uint2 * const __restrict state)
+{
+    uint glob_id = get_global_id(0);
+    uint group_id = get_group_id(0);
+    uint loc_id = get_local_id(0);
+    uint ii, jj, cc;
     uint tmp_val;
     #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
 
+    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+
+    // copy in all threads for better mem access, even if some won't use it
+    uint chromosome[NUM_NODES];
+    for(ii = 0; ii < NUM_NODES; ii++)
+    {
+        chromosome[ii] = chromosomes[ii];
+    }
+
     // mutate with MUT_RATE% chance
-    if(MWC64X(&state[glob_id]) % 100 < MUT_RATE)
+    if((MWC64X(&state[glob_id]) % 100) < MUT_RATE)
     {
         #if defined(MUT_REVERSE)
 
@@ -566,7 +596,7 @@ __kernel void cx
 
         for(; ll < uu; ll++, uu--)
         {
-            SWAP(child[ll], child[uu]);
+            SWAP(chromosome[ll], chromosome[uu]);
         }
 
         #elif defined(MUT_SWAP)
@@ -608,7 +638,7 @@ __kernel void cx
         // swap range
         for(ii = 0; ii < range; ii++)
         {
-            SWAP(child[ll1+ii], child[ll2+ii]);
+            SWAP(chromosome[ll1+ii], chromosome[ll2+ii]);
         }
 
         #else
@@ -618,13 +648,9 @@ __kernel void cx
         #endif
     }
 
-    // increment children to point to this threads chromosome child
-    children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-
-    // copy into children
     for(ii = 0; ii < NUM_NODES; ii++)
     {
-        children[ii] = child[ii];
+        chromosomes[ii] = chromosome[ii];
     }
 }
 

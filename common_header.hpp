@@ -122,9 +122,9 @@ private:
     cl_knl_t TSP_kernel;
     cl_knl_t e_sort_kernel;
     cl_knl_t ne_sort_kernel;
-    cl_knl_t starts_kernel;
     cl_knl_t crossover_kernel;
     cl_knl_t fe_kernel;
+    cl_knl_t mutate_kernel;
 
     // size in bytes of all the chromosomes
     size_t all_chrom_size;
@@ -216,13 +216,14 @@ public:
 };
 
 // how to solve TSP
-enum tsp_e {KOPT_2 = 2, KOPT_3 = 3, DJ, SIMPLE, NONE};
+enum tsp_e {SIMPLE, NONE};
 // which mutation to use
 enum mut_e {REVERSE, SWAP};
 // whether to be elitist or not
 enum sort_e {ELITIST, NONELITIST};
 // pmx or crossover
-enum breed_e {TWOPOINT, PMX, CX};
+enum breed_e {CX};
+// TODO PMX
 
 extern tsp_e tsp_strategy;
 extern mut_e mutate_strategy;
