@@ -33,7 +33,8 @@ cl::Program OCLLearn::createProg
     std::basic_string<char> source_code(std::istreambuf_iterator<char>(source_file),
         (std::istreambuf_iterator<char>()) );
 
-    cl::Program::Sources source(1, std::make_pair(source_code.c_str(), source_code.length()+1));
+    cl::Program::Sources source(1, std::make_pair(source_code.c_str(),
+                                                  source_code.length()));
     program = cl::Program(context, source);
 
     std::stringstream errstream;
@@ -284,6 +285,22 @@ void OCLLearn::initOCL
 
     /****   kernels   *******/
 
+    // mutate kernel
+    try
+    {
+        mutate_kernel = cl_knl_t(all_program, "mutate");
+
+        mutate_kernel.setArg(0, buffers.at("children"));
+        mutate_kernel.setArg(1, buffers.at("rand_state"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making mutate kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
     // fitness kernel
     try
     {
@@ -310,14 +327,13 @@ void OCLLearn::initOCL
         {
             TSP_kernel = cl_knl_t(all_program, "simpleTSP");
         }
-        else if(tsp_strategy == DJ)
-        {
-            TSP_kernel = cl_knl_t(all_program, "djikstra");
-        }
+        /*
+        * TODO
         else
         {
             TSP_kernel = cl_knl_t(all_program, "kOpt");
         }
+        */
 
         TSP_kernel.setArg(0, buffers.at("parents"));
         TSP_kernel.setArg(1, buffers.at("starts"));
@@ -371,27 +387,23 @@ void OCLLearn::initOCL
     // breeding kernel
     try
     {
-        if(breed_strategy == PMX)
-        {
-            crossover_kernel = cl_knl_t(all_program, "pmx");
-            #ifdef VERBOSE
-            std::cout << "Using pmx crossover" << std::endl;
-            #endif
-        }
-        else if(breed_strategy == TWOPOINT)
-        {
-            crossover_kernel = cl_knl_t(all_program, "twoPointCrossover");
-            #ifdef VERBOSE
-            std::cout << "Using two point crossover" << std::endl;
-            #endif
-        }
-        else if(breed_strategy == CX)
+        if(breed_strategy == CX)
         {
             crossover_kernel = cl_knl_t(all_program, "cx");
             #ifdef VERBOSE
             std::cout << "Using cx crossover" << std::endl;
             #endif
         }
+        /*
+        * TODO
+        else if(breed_strategy == PMX)
+        {
+            crossover_kernel = cl_knl_t(all_program, "pmx");
+            #ifdef VERBOSE
+            std::cout << "Using pmx crossover" << std::endl;
+            #endif
+        }
+        */
 
         crossover_kernel.setArg(0, buffers.at("parents"));
         crossover_kernel.setArg(1, buffers.at("children"));

@@ -339,7 +339,7 @@ __kernel void ParallelBitonic_Elitist
     sort_t sort_pair;
 
     // if an even item in the work group
-    if(loc_id % 2 == 0)
+    if(loc_id > LOCAL_SIZE)
     {
         // then use this to access children
         loc_div = loc_id / 2;
@@ -349,7 +349,7 @@ __kernel void ParallelBitonic_Elitist
     else
     {
         // then use this to access parents
-        loc_div = (loc_id - 1) / 2;
+        loc_div = loc_id / 2;
         sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
@@ -549,11 +549,38 @@ __kernel void cx
         parent_flip = !parent_flip;
     }
 
+    // increment children to point to this threads chromosome child
+    children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
+
+    // copy into children
+    for(ii = 0; ii < NUM_NODES; ii++)
+    {
+        children[ii] = child[ii];
+    }
+}
+
+__kernel void mutate
+(__global       uint  *       __restrict chromosomes,
+ __global       uint2 * const __restrict state)
+{
+    uint glob_id = get_global_id(0);
+    uint group_id = get_group_id(0);
+    uint loc_id = get_local_id(0);
+    uint ii, jj, cc;
     uint tmp_val;
     #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
 
+    chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+
+    // copy in all threads for better mem access, even if some won't use it
+    uint chromosome[NUM_NODES];
+    for(ii = 0; ii < NUM_NODES; ii++)
+    {
+        chromosome[ii] = chromosomes[ii];
+    }
+
     // mutate with MUT_RATE% chance
-    if(MWC64X(&state[glob_id]) % 100 < MUT_RATE)
+    if((MWC64X(&state[glob_id]) % 100) < MUT_RATE)
     {
         #if defined(MUT_REVERSE)
 
@@ -566,7 +593,7 @@ __kernel void cx
 
         for(; ll < uu; ll++, uu--)
         {
-            SWAP(child[ll], child[uu]);
+            SWAP(chromosome[ll], chromosome[uu]);
         }
 
         #elif defined(MUT_SWAP)
@@ -589,7 +616,7 @@ __kernel void cx
         // value to start bottom end of swap at - skewed towards bottom end
         ll1 = MWC64X(&state[glob_id]) % NUM_NODES;
         // FIXME not working - hanging on GPU
-        //ll1 = MWC64X(&state[glob_id]) % (MWC64X(&state[glob_id]) % NUM_NODES);
+        ll1 = MWC64X(&state[glob_id]) % (MWC64X(&state[glob_id]) % NUM_NODES);
 
         // range is random length smaller than that left...
         range = MWC64X(&state[glob_id]) % (NUM_NODES - ll1);
@@ -608,7 +635,7 @@ __kernel void cx
         // swap range
         for(ii = 0; ii < range; ii++)
         {
-            SWAP(child[ll1+ii], child[ll2+ii]);
+            SWAP(chromosome[ll1+ii], chromosome[ll2+ii]);
         }
 
         #else
@@ -616,15 +643,11 @@ __kernel void cx
         #error "No mutation strategy specified"
 
         #endif
-    }
 
-    // increment children to point to this threads chromosome child
-    children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-
-    // copy into children
-    for(ii = 0; ii < NUM_NODES; ii++)
-    {
-        children[ii] = child[ii];
+        for(ii = 0; ii < NUM_NODES; ii++)
+        {
+            chromosomes[ii] = chromosome[ii];
+        }
     }
 }
 

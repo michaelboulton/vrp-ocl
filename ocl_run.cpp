@@ -250,7 +250,7 @@ alg_result_t OCLLearn::run
             CHECK_SIZE(TSP_kernel, 1);
             CHECK_SIZE(e_sort_kernel, 2);
             CHECK_SIZE(ne_sort_kernel, 3);
-            CHECK_SIZE(starts_kernel, 4);
+            CHECK_SIZE(mutate_kernel, 4);
             CHECK_SIZE(crossover_kernel, 5);
             CHECK_SIZE(fe_kernel, 6);
 
@@ -344,6 +344,8 @@ alg_result_t OCLLearn::run
         crossover_kernel.setArg(7, lb);
         crossover_kernel.setArg(8, ub);
         ENQUEUE(crossover_kernel)
+
+        ENQUEUE(mutate_kernel);
 
         TSP_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(TSP_kernel)
