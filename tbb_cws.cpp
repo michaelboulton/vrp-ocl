@@ -22,11 +22,11 @@
 
 #include "common_header.hpp"
 
+#if 0
 void TBBRouteMaker::operator()
 (route_vec_t& route) const
 //(const tbb::blocked_range<size_t>& r) const
 {
-#if 0
     unsigned int ii, jj, kk;
 
     // random numbers that decide whether to use a connection or not
@@ -203,8 +203,8 @@ void TBBRouteMaker::operator()
             break;
         }
     }
-#endif
 }
+#endif
 
 TBBRouteMaker::TBBRouteMaker
 (const point_info_vec_t& CWS_pair_list_in,

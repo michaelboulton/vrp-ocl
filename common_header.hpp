@@ -147,7 +147,7 @@ private:
     (std::vector<route_vec_t>&);
 
     void addNode
-    (route_vec_t& route, route_vec_t const& total_route,
+    (route_vec_t& route,
     unsigned int& current_capacity,
     unsigned int pair_first, unsigned int pair_second);
 
@@ -157,6 +157,20 @@ private:
 
     float getBestRoute
     (float&, route_vec_t&, unsigned int);
+
+    // enqueue a kernel
+    void enqueueKernel
+    (cl::Kernel const& kernel,
+    int line, const char* file,
+    const cl::NDRange offset,
+    const cl::NDRange global_range,
+    const cl::NDRange local_range);
+
+    #define ENQUEUE(knl)                                    \
+        OCLLearn::enqueueKernel(knl, __LINE__, __FILE__,    \
+                                cl::NullRange,              \
+                                GLOBAL_SIZE,                \
+                                LOCAL_SIZE);
 
 public:
 

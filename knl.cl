@@ -20,6 +20,7 @@
  *  THE SOFTWARE.
  */
 
+// for IOC
 #ifndef NOTEST
 #define MUT_RATE 25
 #define MUT_SWAP
@@ -185,22 +186,6 @@ void findRouteStarts
     route_starts[0] = rr;
 }
 
-int routeDemand
-(                 uint* const __restrict route,
-                  uint                   route_length,
- __constant const uint* const __restrict node_demands)
-{
-    uint total, ii;
-    total = 0;
-
-    for (ii = 0; ii < route_length; ii++)
-    {
-        total += node_demands[route[ii]];
-    }
-
-    return total;
-}
-
 float totalRouteLength
 (__global   const uint*  const __restrict chromosome,
  __constant const uint2* const __restrict node_coords,
@@ -252,22 +237,6 @@ float totalRouteLength
                                         node_coords[DEPOT_NODE]);
 
     return total_distance;
-}
-
-float routeLength
-(__global   const uint*  const __restrict chromosome,
- __constant const uint2* const __restrict node_coords)
-{
-    uint ii;
-    float route_length = 0.0f;
-
-    for(ii = 0; ii < NUM_NODES; ii++)
-    {
-        route_length += euclideanDistance(node_coords[chromosome[ii]],
-                                          node_coords[chromosome[ii + 1]]);
-    }
-
-    return route_length;
 }
 
 /************************/
@@ -371,6 +340,7 @@ __kernel void ParallelBitonic_Elitist
 
     // offset to this work group
     route_lengths += group_id * LOCAL_SIZE;
+    return;
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
@@ -430,17 +400,6 @@ __kernel void ParallelBitonic_Elitist
         route_lengths += LOCAL_SIZE * group_id + loc_id;
         route_lengths[0] = aux[loc_id].route_length;
     }
-}
-
-// dummy - do no TSP at all
-__kernel void noneTSP
-(__global uint* __restrict chromosomes,
- __global int* __restrict route_starts,
- __constant const uint2* const __restrict node_coords,
- __constant const uint*    const __restrict node_demands,
- __global uint2* const __restrict state)
-{
-    ;
 }
 
 __kernel void cx
@@ -639,7 +598,7 @@ __kernel void cx
 
         // value to start bottom end of swap at - skewed towards bottom end
         ll1 = MWC64X(&state[glob_id]) % NUM_NODES;
-        // FIXME not working - hanging
+        // FIXME not working - hanging on GPU
         //ll1 = MWC64X(&state[glob_id]) % (MWC64X(&state[glob_id]) % NUM_NODES);
 
         // range is random length smaller than that left...
@@ -682,11 +641,11 @@ __kernel void cx
 /************************/
 
 __kernel void simpleTSP
-(__global uint* __restrict chromosomes,
- __global int* __restrict route_starts,
+(__global         uint*        __restrict chromosomes,
+ __global         int*         __restrict route_starts,
  __constant const uint2* const __restrict node_coords,
  __constant const uint*  const __restrict node_demands,
- __global uint2* const __restrict state)
+ __global         uint2* const __restrict state)
 {
     uint glob_id = get_global_id(0);
     uint loc_id = get_local_id(0);

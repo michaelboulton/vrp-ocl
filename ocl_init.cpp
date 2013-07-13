@@ -45,8 +45,9 @@ cl::Program OCLLearn::createProg
         for(dev_it = devices.begin(); dev_it < devices.end(); dev_it++)
         {
             errstream << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(*dev_it);
+            //std::string errs( errstream.str() );
+            std::cout << errstream.str() << std::endl;
         }
-        std::string errs( errstream.str() );
     }
     catch(cl::Error e)
     {
@@ -152,7 +153,7 @@ void OCLLearn::initOCL
     //options << "-cl-strict-aliasing ";
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
-    // FIXME only works on CPU with this on?
+    // FIXME only works on CPU with this on
     options << "-cl-opt-disable ";
 
     // disable testing values

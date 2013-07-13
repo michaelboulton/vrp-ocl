@@ -79,7 +79,6 @@ int OCLLearn::nodesLeft
 
 void OCLLearn::addNode
 (route_vec_t& subroute,
- route_vec_t const& total_route,
  unsigned int& current_capacity,
  unsigned int pair_first,
  unsigned int pair_second)
@@ -280,7 +279,6 @@ void OCLLearn::genChromosomes
                 )
                 {
                     addNode(subroute,
-                            total_route,
                             current_capacity,
                             pair_first,
                             pair_second);
