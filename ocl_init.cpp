@@ -153,10 +153,6 @@ void OCLLearn::initOCL
     //options << "-cl-strict-aliasing ";
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
-<<<<<<< HEAD
-    // FIXME only works on CPU with this on
-=======
->>>>>>> c678b2fae6788d56f18db2029edcba34b82d690a
     //options << "-cl-opt-disable ";
 
     // disable testing values
