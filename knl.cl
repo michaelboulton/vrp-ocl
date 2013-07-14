@@ -386,7 +386,7 @@ __kernel void ParallelBitonic_Elitist
     }
 }
 
-__kernel void cx
+__kernel void breed
 (__global const uint*          __restrict parents,
  __global       uint*          __restrict children,
  __global       uint*          __restrict route_lengths,
@@ -398,7 +398,7 @@ __kernel void cx
     uint glob_id = get_global_id(0);
     uint group_id = get_group_id(0);
     uint loc_id = get_local_id(0);
-    uint ii, jj, cc;
+    uint ii, jj;
 
     // offset to this work group
     parents += LOCAL_SIZE * NUM_NODES * group_id;
@@ -407,7 +407,7 @@ __kernel void cx
     uint other_parent, counter = 0, tmp_rand;
 
     // use only if its value is set, otherwise just choose randomly
-    #if (defined(ARENA_SIZE) && ARENA_SIZE)
+#if (defined(ARENA_SIZE) && ARENA_SIZE)
     // choose one of the top ones based on a random choice
     do
     {
@@ -417,20 +417,27 @@ __kernel void cx
     while (other_parent == loc_id
     && counter++ < ARENA_SIZE
     && tmp_rand > counter);
-    #else
+#else
     // randomly choose
     do
     {
         other_parent = MWC64X(&state[glob_id]) % LOCAL_SIZE;
     }
     while (other_parent == loc_id);
-    #endif
+#endif
 
     // offset to this item
     __global const uint* parent_1 = parents + loc_id * NUM_NODES;
 
     // other parent
     __global const uint* parent_2 = parents + other_parent * NUM_NODES;
+
+    uint child[NUM_NODES];
+
+#if defined(BREED_CX)
+
+    // cycle counter
+    uint cc;
 
     // at the end, will hold array of numbers form 1-num cycles
     int cycles[NUM_NODES];
@@ -529,9 +536,6 @@ __kernel void cx
     // while it hasn't been told to end
     while(1);
 
-    // copy into child first - dont mess up parent if elitist sorting
-    uint child[NUM_NODES];
-
     // flip parent between cycles
     bool parent_flip = false;
 
@@ -551,6 +555,114 @@ __kernel void cx
         // choose from different parent for each cycle
         parent_flip = !parent_flip;
     }
+
+#elif defined(BREED_PMX)
+
+    // to see which elements in child have not yet been written
+    int copied[NUM_NODES];
+    // reset
+    for(jj = 0; jj < NUM_NODES; jj++)
+    {
+        copied[jj] = 0;
+    }
+
+    // first choose a random range like in swap mutation
+    uint lb, range;
+    lb = MWC64X(&state[glob_id]) % NUM_NODES;
+    // XXX possibly make range bound to 50% of chromosome or something? ?
+    range = MWC64X(&state[glob_id]) % (NUM_NODES - lb);
+
+    // copy initial range from parent 1 (most genetic code wilb be from it?)
+    for (ii = lb; ii < range+lb; ii++)
+    {
+        child[ii] = parent_1[ii];
+        copied[ii] = 1;
+    }
+
+    // value at this position in parent_1 (and hence the child too)
+    uint p1_val;
+
+    /*
+     *  Could either do a nested loop or do one loop to find all the elemnts
+     *  which haven't been copied from parent 2 - tradeoff between memory usage
+     *  and computation
+     */
+
+    // for each value in the copied range in child/parent_1
+    for (ii = lb; ii < range+lb; ii++)
+    {
+        bool found = false;
+
+        /*
+         *  Go through all elements of parent_2 in the same range that was
+         *  copied and see if any of them are the same - if they are, then it
+         *  doens't need to be copied and just continue
+         */
+        for (jj = lb; jj < range+lb; jj++)
+        {
+            // break immediately if found in parent_2 range
+            if (parent_2[ii] == child[jj])
+            {
+                found = true;
+                break;
+            }
+        }
+
+        // if child[ii] was in the copied range in parent_2, go to next element
+        // in child
+        if (found)
+        {
+            continue;
+        }
+
+        /*
+         *  p1_val is the element in parent_1 at the same index for which the
+         *  non matching element in parent 2 was found
+         */
+        p1_val = parent_1[ii];
+
+        // has parent_2[ii] been copied yet
+        bool finished = false;
+
+        // go until something has been copied
+        do
+        {
+            // try to find p1_val in parent_2
+            for (jj = 0; jj < NUM_NODES; jj++)
+            {
+                if (parent_2[jj] == p1_val)
+                {
+                    // if its not in the copied range
+                    if (jj < lb || jj >= range+lb)
+                    {
+                        // copy initial unmatched parent_2 value
+                        child[jj] = parent_2[ii];
+                        copied[jj] = 1;
+                        finished = true;
+                    }
+                    else
+                    {
+                        p1_val = parent_1[jj];
+                    }
+
+                    break;
+                }
+            }
+        }
+        while (!finished);
+
+    }
+
+    // copy any empty spots in child from parent_2
+    for (ii = 0; ii < NUM_NODES; ii++)
+    {
+        if (copied[ii] == 0)
+        {
+            child[ii] = parent_2[ii];
+        }
+    }
+
+#endif
 
     // increment children to point to this threads chromosome child
     children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
@@ -585,7 +697,7 @@ __kernel void mutate
     // mutate with MUT_RATE% chance
     if((MWC64X(&state[glob_id]) % 100) < MUT_RATE)
     {
-        #if defined(MUT_REVERSE)
+#if defined(MUT_REVERSE)
 
         // reverse a random section of the chromosome
         uint ll, uu, range;
@@ -599,7 +711,7 @@ __kernel void mutate
             SWAP(chromosome[ll], chromosome[uu]);
         }
 
-        #elif defined(MUT_SWAP)
+#elif defined(MUT_SWAP)
 
         uint ll1, uu1, ll2, uu2, range;
 
@@ -641,11 +753,12 @@ __kernel void mutate
             SWAP(chromosome[ll1+ii], chromosome[ll2+ii]);
         }
 
-        #else
+#else
 
         #error "No mutation strategy specified"
 
-        #endif
+#endif
+
     }
 
     for(ii = 0; ii < NUM_NODES; ii++)

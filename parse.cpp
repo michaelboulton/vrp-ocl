@@ -50,6 +50,7 @@ void parseArgs
     static struct option long_options[] =
     {
         {"arena_size", required_argument, 0, 'a'},
+        {"breed", required_argument, 0, 'b'},
         {"min_capacity", required_argument, 0, 'c'},
         {"select_strategy", required_argument, 0, 'e'},
         {"input_file", required_argument, 0, 'f'},
@@ -70,6 +71,7 @@ void parseArgs
     static const char* help_strings[] = 
     {
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
+        "Breed strategy - either CX or PMX",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
         "Selection strategy - whether to keep the best of parents and children (YESELITIST) or just the children (NONELITIST)",
         "Input file - which file to read input from",
@@ -102,7 +104,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:c:e:f:g:hi:m:n:p:r:s:t:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:b:c:e:f:g:hi:m:n:p:r:s:t:v",
                                    long_options, &option_index)))
         {
             break;
@@ -121,6 +123,32 @@ void parseArgs
             CONV_CHECK(-a, 0);
             ARENA_SIZE = converted;
             break;
+
+        case 'b':
+            read_arg = std::string(optarg);
+            std::transform(read_arg.begin(),
+                           read_arg.end(),
+                           read_arg.begin(),
+                           toupper);
+            if (std::string::npos != read_arg.find("CX"))
+            {
+                breed_strategy = CX;
+            }
+            else if (std::string::npos != read_arg.find("PMX"))
+            {
+                breed_strategy = PMX;
+            }
+            else
+            {
+                fprintf(stderr,
+                        "Unknown breed strategy '%s' passed to -b\n",
+                        optarg);
+                fprintf(stderr,
+                        "Valid options are CX and PMX\n");
+                exit(1);
+            }
+            break;
+
 
         case 'c':
             CONV_CHECK(-c, 0);
