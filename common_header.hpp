@@ -222,7 +222,7 @@ enum mut_e {REVERSE, SWAP};
 // whether to be elitist or not
 enum sort_e {ELITIST, NONELITIST};
 // pmx or crossover
-enum breed_e {CX};
+enum breed_e {CX, PMX};
 // TODO PMX
 
 extern tsp_e tsp_strategy;

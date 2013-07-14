@@ -153,7 +153,10 @@ void OCLLearn::initOCL
     //options << "-cl-strict-aliasing ";
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
+<<<<<<< HEAD
     // FIXME only works on CPU with this on
+=======
+>>>>>>> c678b2fae6788d56f18db2029edcba34b82d690a
     //options << "-cl-opt-disable ";
 
     // disable testing values
@@ -187,6 +190,21 @@ void OCLLearn::initOCL
         std::cout << "Using random range swap for mutation" << std::endl;
         #endif
         options << "-DMUT_SWAP ";
+    }
+
+    if (breed_strategy == CX)
+    {
+        options << "-DBREED_CX ";
+        #ifdef VERBOSE
+        std::cout << "Using cx crossover" << std::endl;
+        #endif
+    }
+    else if (breed_strategy == PMX)
+    {
+        options << "-DBREED_PMX ";
+        #ifdef VERBOSE
+        std::cout << "Using pmx crossover" << std::endl;
+        #endif
     }
 
     std::cout << "options:" << std::endl;
@@ -386,23 +404,7 @@ void OCLLearn::initOCL
     // breeding kernel
     try
     {
-        if(breed_strategy == CX)
-        {
-            crossover_kernel = cl_knl_t(all_program, "cx");
-            #ifdef VERBOSE
-            std::cout << "Using cx crossover" << std::endl;
-            #endif
-        }
-        /*
-        * TODO
-        else if(breed_strategy == PMX)
-        {
-            crossover_kernel = cl_knl_t(all_program, "pmx");
-            #ifdef VERBOSE
-            std::cout << "Using pmx crossover" << std::endl;
-            #endif
-        }
-        */
+        crossover_kernel = cl_knl_t(all_program, "breed");
 
         crossover_kernel.setArg(0, buffers.at("parents"));
         crossover_kernel.setArg(1, buffers.at("children"));
