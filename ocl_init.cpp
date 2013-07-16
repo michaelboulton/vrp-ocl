@@ -163,6 +163,7 @@ void OCLLearn::initOCL
     options << "-DNUM_SUBROUTES=" << NUM_SUBROUTES * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
     options << "-DCAPACITY=" << info.capacity << " ";
+    options << "-DMIN_CAPACITY=" << MIN_CAPACITY << " ";
     options << "-DLOCAL_SIZE=" << LOCAL_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
     options << "-DK_OPT=" << tsp_strategy << " ";

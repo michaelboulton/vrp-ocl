@@ -22,26 +22,33 @@
 
 #include "common_header.hpp"
 
-// initial parameters
+/*
+ *  Initial parameters
+ *
+ *  These are what I found to be the best based on simple testing
+ */
 tsp_e tsp_strategy = SIMPLE;
-mut_e mutate_strategy = SWAP;
+mut_e mutate_strategy = REVERSE;
 sort_e sort_strategy = NONELITIST;
-breed_e breed_strategy = CX;
+breed_e breed_strategy = PMX;
 
 int MUTRATE = 25;
 unsigned int NUM_SUBROUTES = 7;
 unsigned int STOPS_PER_ROUTE = 14;
 unsigned int MIN_CAPACITY = 5;
 unsigned int RAND_THRESHOLD = 95;
-unsigned int ARENA_SIZE = 0;
-size_t GENERATIONS = 500;
+unsigned int ARENA_SIZE = 8;
+int DEVICE_TYPE = CL_DEVICE_TYPE_CPU;
+size_t GLOBAL_SIZE = 2048;
+size_t LOCAL_SIZE = 32;
+
+// other params
+std::string INPUT_FILE("fruitybun-data.vrp");
 int VERBOSE_OUTPUT = 0;
 
-int DEVICE_TYPE = CL_DEVICE_TYPE_GPU;
-size_t GLOBAL_SIZE = 512;
-size_t LOCAL_SIZE = 128;
-
-std::string INPUT_FILE("fruitybun-data.vrp");
+// say max 10 minutes or 20k generations default
+size_t GENERATIONS = 20000;
+double MAX_TIME = 360;
 
 void parseArgs
 (int argc, char* argv[])
@@ -52,6 +59,7 @@ void parseArgs
         {"arena_size", required_argument, 0, 'a'},
         {"breed", required_argument, 0, 'b'},
         {"min_capacity", required_argument, 0, 'c'},
+        {"type", required_argument, 0, 'd'},
         {"select_strategy", required_argument, 0, 'e'},
         {"input_file", required_argument, 0, 'f'},
         {"per_generation", required_argument, 0, 'g'},
@@ -62,7 +70,7 @@ void parseArgs
         {"per_population", required_argument, 0, 'p'},
         {"mutrate", required_argument, 0, 'r'},
         {"stops_per_route", required_argument, 0, 's'},
-        {"type", required_argument, 0, 't'},
+        {"time", required_argument, 0, 't'},
         {"verbose", no_argument, 0, 'v'},
         {0, 0, 0, 0}
     };
@@ -73,6 +81,7 @@ void parseArgs
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
         "Breed strategy - either CX, PMX, or O1",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
+        "Device type - CPU, GPU, ACCELERATOR",
         "Selection strategy - whether to keep the best of parents and children (YESELITIST) or just the children (NONELITIST)",
         "Input file - which file to read input from",
         "Total size - how many chromosomes in total in all populations",
@@ -83,7 +92,7 @@ void parseArgs
         "Population size - size per population in the total number of populations",
         "Mutation rate - percentage chance of a chromosome being mutated",
         "Stops per route - number of stops before route creation will go back to depot",
-        "Device type - CPU, GPU, ACCELERATOR",
+        "Time to run - max time to run, stopping early even if specified number of generations has not passed",
         "Verbose mode"
     };
 
@@ -104,7 +113,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:b:c:e:f:g:hi:m:n:p:r:s:t:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:b:c:d:e:f:g:hi:m:n:p:r:s:v",
                                    long_options, &option_index)))
         {
             break;
@@ -236,7 +245,7 @@ void parseArgs
             }
             break;
 
-        case 't':
+        case 'd':
             read_arg = std::string(optarg);
             std::transform(read_arg.begin(),
                            read_arg.end(),
@@ -303,6 +312,11 @@ void parseArgs
             }
             while (long_options[++ii].name);
             exit(0);
+            break;
+
+        case 't':
+            CONV_CHECK(-t, 1);
+            MAX_TIME = converted;
             break;
 
         case 'v':

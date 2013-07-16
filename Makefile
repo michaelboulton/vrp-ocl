@@ -36,8 +36,8 @@ link: $(FILES)
 	$(VERB) \
 	-c $<
 
-cpu: $(OUTFILE)
-	./$(OUTFILE) -t CPU -e NONELITIST -m SWAP -c 5 -g 64 -p 16 -a 4 -m SWAP -b CX -i 10000
+run: $(OUTFILE)
+	./$(OUTFILE)
 
 clean:
 	rm -f *.o *.mod *genmod* *.s $(OUTFILE)

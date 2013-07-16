@@ -113,8 +113,7 @@ const cl::NDRange local_range)
 }
 
 float OCLLearn::getBestRoute
-(float& best_route, route_vec_t& best_chromosome,
- unsigned int ii)
+(float& best_route, route_vec_t& best_chromosome)
 {
     float* min_route;
 
@@ -163,20 +162,6 @@ float OCLLearn::getBestRoute
                                     (all_chrom_size / GLOBAL_SIZE),
                                 (all_chrom_size / GLOBAL_SIZE),
                                 &best_chromosome.at(0));
-
-        #ifdef VERBOSE
-        std::cout << std::endl;
-        unsigned int real_sz = best_chromosome.size();
-        for(jj = 0; jj < real_sz; jj++)
-        {
-            std::cout << best_chromosome.at(jj) << " ";
-        }
-        std::cout << std::endl;
-        std::cout << *min_route;
-        std::cout << " at iteration ";
-        std::cout << ii;
-        std::cout << std::endl;
-        #endif
     }
 
     avg = std::accumulate(results_host,
@@ -189,7 +174,7 @@ float OCLLearn::getBestRoute
 alg_result_t OCLLearn::run
 (void)
 {
-    unsigned int ii, lb, ub;
+    unsigned int ii, jj;
     double t_0, t_1;
 
     cl::NDRange doub_local(LOCAL_SIZE * 2);
@@ -220,6 +205,7 @@ alg_result_t OCLLearn::run
     queue.finish();
 
     float best_route = std::numeric_limits<float>::max();
+    float new_best = best_route;
     route_vec_t best_chromosome = all_routes.back();
 
     try
@@ -304,7 +290,9 @@ alg_result_t OCLLearn::run
 
     /********************/
 
-    for(ii = 1; ii < GENERATIONS + 1; ii++)
+    fprintf(stdout, "Now going for %zu iterations or %d seconds\n", GENERATIONS, int(MAX_TIME));
+
+    for (ii = 1; ii < GENERATIONS + 1; ii++)
     {
         #ifdef VERBOSE
         std::cout << "\rNow on iteration " << ii << "/";
@@ -394,7 +382,30 @@ alg_result_t OCLLearn::run
          */
 
         // see if a better route has been created
-        getBestRoute(best_route, best_chromosome, ii);
+        getBestRoute(new_best, best_chromosome);
+
+        if (new_best < best_route)
+        {
+            best_route = new_best;
+            #ifdef VERBOSE
+            std::cout << std::endl;
+            unsigned int real_sz = best_chromosome.size();
+            for(jj = 0; jj < real_sz; jj++)
+            {
+                std::cout << best_chromosome.at(jj) << " ";
+            }
+            fprintf(stdout,
+                    "\n%f at iteration %d after %.2lf secs\n",
+                    best_route, ii, MPI_Wtime() - t_0);
+            #endif
+        }
+
+        if (MPI_Wtime() - t_0 > MAX_TIME)
+        {
+            fprintf(stdout, "\n===============\n");
+            fprintf(stdout, "\nHit clock limit at generation %d\n", ii);
+            break;
+        }
     }
 
     queue.finish();

@@ -35,6 +35,7 @@ float euclideanDistance
     return sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
 }
 
+// FIXME this doesn't really do it right? prints out route longer than it actually is
 void printRoute
 (const route_vec_t& route,
  const RunInfo& info)

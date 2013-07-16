@@ -156,7 +156,7 @@ private:
     route_vec_t & remaining);
 
     float getBestRoute
-    (float&, route_vec_t&, unsigned int);
+    (float&, route_vec_t&);
 
     // enqueue a kernel
     void enqueueKernel
@@ -255,4 +255,6 @@ extern size_t GLOBAL_SIZE;
 extern size_t LOCAL_SIZE;
 
 extern std::string INPUT_FILE;
+
+extern double MAX_TIME;
 
