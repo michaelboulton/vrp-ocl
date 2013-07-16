@@ -135,7 +135,6 @@ void OCLLearn::initOCL
 
     switch (devices.size())
     {
-    // for a specific machine with 2 GPUs in
     case 1:
         device = devices.at(0);
         break;
