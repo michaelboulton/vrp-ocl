@@ -434,113 +434,84 @@ __kernel void breed
 
     uint child[NUM_NODES];
 
+/*
+ *  TODO
+ *  Order 1 recombination
+ */
 #if defined(BREED_CX)
-
-    // cycle counter
-    uint cc;
 
     // at the end, will hold array of numbers form 1-num cycles
     int cycles[NUM_NODES];
-    // to see which ones have been visited
-    int vis_mask[NUM_NODES];
 
     // reset
-    for(jj = 0; jj < NUM_NODES; jj++)
+    for (jj = 0; jj < NUM_NODES; jj++)
     {
         cycles[jj] = 0;
-        vis_mask[jj] = 0;
     }
 
-    // beginning of first cycle
-    uint target;
-    /*
-    *   FIXME
-    *   This is being used both in the cycles mask thing to see which ones have
-    *   been used as well as checking the nodes, but one is 2-based and the
-    *   other is 0-based
-    *
-    *   First choice is different in that it can be any element - does just
-    *   fixing it here make it work?
-    */
-    target = 1 + MWC64X(&state[glob_id]) % (NUM_NODES - 1);
-
-    // next index in loop
-    uint next_idx;
-
     // cycle count
-    cc = 1;
+    uint cc = 1;
+
+    // index of current element to look at
+    uint cur_idx;
 
     do
     {
-        // find the index of target in the first parent
-        for(jj = 0; jj < NUM_NODES; jj++)
+        // find somewhere random to start this cycle
+        do
         {
-            if(parent_1[jj] == target)
-            {
-                next_idx = jj;
-                break;
-            }
+            cur_idx = MWC64X(&state[glob_id]) % NUM_NODES;
         }
+        while (cycles[cur_idx]);
 
-        // it has already been in the current cycle - back to beginning
-        if(vis_mask[next_idx])
+        // keep going until the cycle is closed
+        while (!cycles[cur_idx])
         {
-            for(jj = 0; jj < NUM_NODES; jj++)
-            {
-                if(vis_mask[jj])
-                {
-                    // set node index in cycle to indicate
-                    // which cycle number it was in
-                    cycles[jj] = cc;
-                }
-                vis_mask[jj] = 0;
-            }
+            // mark as being in this route
+            cycles[cur_idx] = cc;
 
-            bool end = true;
-            // see if they've all been added
-            for(jj = 0; jj < NUM_NODES; jj++)
+            // offset by 2 because nodes start at 2 and array starts at 0
+            //cur_idx = parent_2[parent_1[cur_idx] - 2] - 2;
+
+            for (jj = 0; jj < NUM_NODES; jj++)
             {
-                // if even a single one remains, dont finish
-                if(!cycles[jj])
+                if (parent_1[jj] == parent_2[cur_idx])
                 {
-                    end = false;
+                    // FIXME wrong
+                    cur_idx = jj;
                     break;
                 }
             }
+        }
 
-            // if its going to end, next bit will loop infinitely
-            if(end)
+        // if still doing crossover
+        bool finished = false;
+
+        // see if they've all been added
+        for (jj = 0; jj < NUM_NODES; jj++)
+        {
+            // if even a single one remains, dont finish
+            if (!cycles[jj])
             {
+                finished = true;
                 break;
             }
-
-            // find next that isn't already in a route
-            do
-            {
-                target = MWC64X(&state[glob_id]) % NUM_NODES;
-            }
-            while(cycles[target]);
-
-            target = parent_2[target];
-
-            // increment cycle number
-            cc++;
         }
-        else
+        if (!finished)
         {
-            // mark the next cycle start
-            vis_mask[next_idx] = 1;
-            target = parent_2[next_idx];
+            break;
         }
+
     }
+    // increment cycle number
     // while it hasn't been told to end
-    while(1);
+    while (cc++);
 
     // flip parent between cycles
     bool parent_flip = false;
 
     // cycle numbers
-    for(ii = 1; ii <= cc; ii++)
+    for(ii = 1; ii < cc + 1; ii++)
     {
         // go through cycle, picking from one parent or another
         for(jj = 0; jj < NUM_NODES; jj++)

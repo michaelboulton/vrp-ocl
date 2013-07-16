@@ -154,7 +154,7 @@ void OCLLearn::initOCL
     //options << "-cl-strict-aliasing ";
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
-    //options << "-cl-opt-disable ";
+    options << "-cl-opt-disable ";
 
     // disable testing values
     options << "-DNOTEST ";

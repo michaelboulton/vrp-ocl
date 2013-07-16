@@ -316,10 +316,11 @@ alg_result_t OCLLearn::run
         *   2.  breed
         *   3.  mutate
         *   4.  TSP
-        *   5.  sort all by fitness, elitist or non elitist
-        *   6.  copy best back into parents, discard the rest
-        *   7.  sort parents by fitness
-        *   8.  goto 2
+        *   5.  calculate fitness
+        *   6.  sort all by fitness, elitist or non elitist
+        *   7.  copy best back into parents, discard the rest
+        *   8.  sort parents by fitness
+        *   9.  goto 1
         */
 
         /********************/
@@ -327,14 +328,17 @@ alg_result_t OCLLearn::run
         // do foreign exchange
         ENQUEUE(fe_kernel)
 
-        // do crossover
+        // breed
         ENQUEUE(crossover_kernel)
 
+        // mutate
         ENQUEUE(mutate_kernel);
 
+        // TSP
         TSP_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(TSP_kernel)
 
+        // calculae fitness
         fitness_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(fitness_kernel)
 
