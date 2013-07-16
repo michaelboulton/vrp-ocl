@@ -783,11 +783,10 @@ __kernel void mutate
         lb = MWC64X(&state[glob_id]) % NUM_NODES;
         // XXX possibly make range bound to 50% of chromosome or something? ?
         range = MWC64X(&state[glob_id]) % (NUM_NODES - lb);
-        // how much to slide this chunk right by
-        slide = MWC64X(&state[glob_id]) % (NUM_NODES - (range+lb));
+        // how much to slide this chunk left by
+        slide = MWC64X(&state[glob_id]) % lb;
 
-        // idx of last value after the chunk
-        jj = lb+range + 1;
+        jj = 0;
 
         for (ii = lb; ii < range+lb; ii++, jj++)
         {
