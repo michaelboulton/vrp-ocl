@@ -113,7 +113,7 @@ void parseArgs
 
     while(1)
     {
-        if (-1 == (c = getopt_long(argc, argv, "a:b:c:d:e:f:g:hi:m:n:p:r:s:v",
+        if (-1 == (c = getopt_long(argc, argv, "a:b:c:d:e:f:g:hi:m:n:p:r:s:t:v",
                                    long_options, &option_index)))
         {
             break;
