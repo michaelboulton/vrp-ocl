@@ -180,6 +180,13 @@ void OCLLearn::initOCL
         #endif
         options << "-DMUT_REVERSE ";
     }
+    else if (mutate_strategy == SLIDE)
+    {
+        #ifdef VERBOSE
+        std::cout << "Using slide for mutation" << std::endl;
+        #endif
+        options << "-DMUT_SLIDE ";
+    }
     else if (mutate_strategy == SWAP)
     {
         #ifdef VERBOSE

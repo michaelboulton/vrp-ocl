@@ -703,6 +703,8 @@ __kernel void mutate
     uint group_id = get_group_id(0);
     uint loc_id = get_local_id(0);
     uint ii, jj, cc;
+
+    // for swapping
     uint tmp_val;
     #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
 
@@ -718,6 +720,7 @@ __kernel void mutate
     // mutate with MUT_RATE% chance
     if((MWC64X(&state[glob_id]) % 100) < MUT_RATE)
     {
+
 #if defined(MUT_REVERSE)
 
         // reverse a random section of the chromosome
@@ -774,9 +777,22 @@ __kernel void mutate
             SWAP(chromosome[ll1+ii], chromosome[ll2+ii]);
         }
 
-#else
+#elif defined(MUT_SLIDE)
 
-        #error "No mutation strategy specified"
+        uint lb, range, slide;
+        lb = MWC64X(&state[glob_id]) % NUM_NODES;
+        // XXX possibly make range bound to 50% of chromosome or something? ?
+        range = MWC64X(&state[glob_id]) % (NUM_NODES - lb);
+        // how much to slide this chunk right by
+        slide = MWC64X(&state[glob_id]) % (NUM_NODES - (range+lb));
+
+        // idx of last value after the chunk
+        jj = lb+range + 1;
+
+        for (ii = lb; ii < range+lb; ii++, jj++)
+        {
+            SWAP(chromosome[ii], chromosome[jj]);
+        }
 
 #endif
 
@@ -905,7 +921,7 @@ __kernel void foreignExchange
     uint num_groups = get_num_groups(0);
 
     // the best item from each group gets swapped
-    if(loc_id == 0 && group_id < num_groups / 2)
+    if (loc_id == 0 && group_id < num_groups / 2)
     {
         // best in this work group
         __global uint* local_chrom = chromosomes

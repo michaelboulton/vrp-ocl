@@ -218,7 +218,7 @@ public:
 // how to solve TSP
 enum tsp_e {SIMPLE, NONE};
 // which mutation to use
-enum mut_e {REVERSE, SWAP};
+enum mut_e {REVERSE, SWAP, SLIDE};
 // whether to be elitist or not
 enum sort_e {ELITIST, NONELITIST};
 // pmx or crossover

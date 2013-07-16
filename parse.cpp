@@ -78,7 +78,7 @@ void parseArgs
         "Total size - how many chromosomes in total in all populations",
         "Print help",
         "Iterations - number of generations to go through",
-        "Mutation strategy - what kind of mutation strategy to use. Either SWAP or REVERSE",
+        "Mutation strategy - what kind of mutation strategy to use. Either SWAP, SLIDE, or REVERSE",
         "Number of trucks - number of subroutes in a total route to create routes for",
         "Population size - size per population in the total number of populations",
         "Mutation rate - percentage chance of a chromosome being mutated",
@@ -216,6 +216,10 @@ void parseArgs
             if (std::string::npos != read_arg.find("REVERSE"))
             {
                 mutate_strategy = REVERSE;
+            }
+            else if (std::string::npos != read_arg.find("SLIDE"))
+            {
+                mutate_strategy = SLIDE;
             }
             else if (std::string::npos != read_arg.find("SWAP"))
             {
