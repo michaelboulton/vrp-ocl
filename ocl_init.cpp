@@ -154,7 +154,7 @@ void OCLLearn::initOCL
     //options << "-cl-strict-aliasing ";
     //options << "-cl-mad-enable ";
     //options << "-cl-no-signed-zeros ";
-    options << "-cl-opt-disable ";
+    //options << "-cl-opt-disable ";
 
     // disable testing values
     options << "-DNOTEST ";
@@ -201,6 +201,13 @@ void OCLLearn::initOCL
         options << "-DBREED_PMX ";
         #ifdef VERBOSE
         std::cout << "Using pmx crossover" << std::endl;
+        #endif
+    }
+    else if (breed_strategy == O1)
+    {
+        options << "-DBREED_O1 ";
+        #ifdef VERBOSE
+        std::cout << "Using order 1 crossover" << std::endl;
         #endif
     }
 

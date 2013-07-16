@@ -111,6 +111,25 @@ float subrouteLength
 }
 
 /*
+ *  Goes through the array for the range specified and sees if the value passed
+ *  is already in it
+ */
+inline
+bool contains
+(int * arr, int val, int lb, int range)
+{
+    for (int ii = lb; ii < lb+range; ii++)
+    {
+        if (arr[ii] == val)
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/*
  *  Takes global pointers to chromosomes, node coordinates, node demands, and a
  *  pointer to route_starts which is global storage holding the positions in
  *  each chromosome where the beginning of the mini subroutes start.
@@ -434,19 +453,54 @@ __kernel void breed
 
     uint child[NUM_NODES];
 
-/*
- *  TODO
- *  Order 1 recombination
- */
-#if defined(BREED_CX)
+#if defined(BREED_O1)
+
+    for (ii = 0; ii < NUM_NODES; ii++)
+    {
+        child[ii] = 0;
+    }
+
+    // choose range
+    uint lb, range;
+    lb = MWC64X(&state[glob_id]) % NUM_NODES;
+    // XXX possibly make range bound to 50% of chromosome or something? ?
+    range = MWC64X(&state[glob_id]) % (NUM_NODES - lb);
+
+    // copy an initial random range
+    for (ii = lb; ii < range+lb; ii++)
+    {
+        child[ii] = parent_1[ii];
+    }
+
+    // start trying to copy from parent_2[0]
+    jj = 0;
+
+    // go through parent 2 and insert in order
+    for (ii = 0; ii < NUM_NODES; ii++)
+    {
+        // hasn't had a value written to it yet
+        if (!child[ii])
+        {
+            // go until a value that hasn't already been copied is found
+            while (contains(child, parent_2[jj], lb, range))
+            {
+                jj++;
+            }
+
+            // copy and increment jj
+            child[ii] = parent_2[jj++];
+        }
+    }
+
+#elif defined(BREED_CX)
 
     // at the end, will hold array of numbers form 1-num cycles
     int cycles[NUM_NODES];
 
     // reset
-    for (jj = 0; jj < NUM_NODES; jj++)
+    for (ii = 0; ii < NUM_NODES; ii++)
     {
-        cycles[jj] = 0;
+        cycles[ii] = 0;
     }
 
     // cycle count
@@ -470,15 +524,11 @@ __kernel void breed
             // mark as being in this route
             cycles[cur_idx] = cc;
 
-            // offset by 2 because nodes start at 2 and array starts at 0
-            //cur_idx = parent_2[parent_1[cur_idx] - 2] - 2;
-
-            for (jj = 0; jj < NUM_NODES; jj++)
+            for (ii = 0; ii < NUM_NODES; ii++)
             {
-                if (parent_1[jj] == parent_2[cur_idx])
+                if (parent_1[ii] == parent_2[cur_idx])
                 {
-                    // FIXME wrong
-                    cur_idx = jj;
+                    cur_idx = ii;
                     break;
                 }
             }
@@ -488,10 +538,10 @@ __kernel void breed
         bool finished = false;
 
         // see if they've all been added
-        for (jj = 0; jj < NUM_NODES; jj++)
+        for (ii = 0; ii < NUM_NODES; ii++)
         {
             // if even a single one remains, dont finish
-            if (!cycles[jj])
+            if (!cycles[ii])
             {
                 finished = true;
                 break;

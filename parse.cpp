@@ -71,7 +71,7 @@ void parseArgs
     static const char* help_strings[] = 
     {
         "Arena size - size of arena to do arena selection. Setting to 0 means parents are chosen at random",
-        "Breed strategy - either CX or PMX",
+        "Breed strategy - either CX, PMX, or O1",
         "Capacity - how much capacity left in each truck will cause route creation to go back to depot",
         "Selection strategy - whether to keep the best of parents and children (YESELITIST) or just the children (NONELITIST)",
         "Input file - which file to read input from",
@@ -133,6 +133,10 @@ void parseArgs
             if (std::string::npos != read_arg.find("CX"))
             {
                 breed_strategy = CX;
+            }
+            else if (std::string::npos != read_arg.find("O1"))
+            {
+                breed_strategy = O1;
             }
             else if (std::string::npos != read_arg.find("PMX"))
             {
