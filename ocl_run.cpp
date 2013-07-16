@@ -387,6 +387,12 @@ alg_result_t OCLLearn::run
 
         /********************/
 
+        /*
+         *  TODO - if a population goes stale for ~50-100 generations, generate
+         *  a new set of chromosomes, send to device, go again. Possibly use
+         *  openmp task parallel to launch it asynchronously
+         */
+
         // see if a better route has been created
         getBestRoute(best_route, best_chromosome, ii);
     }
