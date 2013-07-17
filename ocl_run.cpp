@@ -322,9 +322,13 @@ alg_result_t OCLLearn::run
         // mutate
         ENQUEUE(mutate_kernel);
 
+        // find route starts for children
+        frs_kernel.setArg(0, buffers.at("children"));
+        ENQUEUE(frs_kernel);
+
         // TSP
         TSP_kernel.setArg(0, buffers.at("children"));
-        ENQUEUE(TSP_kernel)
+        //ENQUEUE(TSP_kernel)
 
         // calculae fitness
         fitness_kernel.setArg(0, buffers.at("children"));
@@ -334,6 +338,10 @@ alg_result_t OCLLearn::run
         if(ELITIST == sort_strategy)
         {
             static cl::NDRange fitness_offset(GLOBAL_SIZE);
+
+            // find route starts for parents
+            frs_kernel.setArg(0, buffers.at("parents"));
+            ENQUEUE(frs_kernel);
 
             // fitness of parents for elitist sorting
             fitness_kernel.setArg(0, buffers.at("parents"));

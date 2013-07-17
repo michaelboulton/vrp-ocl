@@ -82,7 +82,6 @@ public:
     unsigned int capacity;
     // depot node - not to be included in routes
     unsigned int depot_node;
-    // FIXME 0 indexed ???
     // cartesian coordinates of each node
     node_map_t node_coords;
     // demand for each node
@@ -119,6 +118,7 @@ private:
 
     // kernels
     cl_knl_t fitness_kernel;
+    cl_knl_t frs_kernel;
     cl_knl_t TSP_kernel;
     cl_knl_t e_sort_kernel;
     cl_knl_t ne_sort_kernel;
