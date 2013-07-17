@@ -329,6 +329,24 @@ void OCLLearn::initOCL
         exit(1);
     }
 
+    // find route starts kernel
+    try
+    {
+        frs_kernel = cl_knl_t(all_program, "findRouteStarts");
+
+        frs_kernel.setArg(0, buffers.at("parents"));
+        frs_kernel.setArg(1, buffers.at("coords"));
+        frs_kernel.setArg(2, buffers.at("demands"));
+        frs_kernel.setArg(3, buffers.at("starts"));
+    }
+    catch(cl::Error e)
+    {
+        std::cout << "\nError in making frs kernel" << std::endl;
+        std::cout << e.what() << std::endl;
+        std::cout << e.err() << std::endl;
+        exit(1);
+    }
+
     // fitness kernel
     try
     {

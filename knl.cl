@@ -129,6 +129,8 @@ bool contains
     return false;
 }
 
+/************************/
+
 /*
  *  Takes global pointers to chromosomes, node coordinates, node demands, and a
  *  pointer to route_starts which is global storage holding the positions in
@@ -143,7 +145,7 @@ bool contains
  *  position 0, 4, and 7. This route is split up into subroutes 1-2-3-4, 5-6-7,
  *  and 8-9.
  */
-void findRouteStarts
+__kernel void findRouteStarts
 (__global   const uint*        __restrict chromosomes,
  __constant const uint2* const __restrict node_coords,
  __constant const uint*  const __restrict node_demands,
@@ -200,8 +202,6 @@ void findRouteStarts
     route_starts[0] = rr;
 }
 
-/************************/
-
 __kernel void fitness
 (__global   const uint *          __restrict chromosomes,
  __global         float *   const __restrict results,
@@ -214,11 +214,6 @@ __kernel void fitness
     const uint group_id = get_group_id(0);
 
     uint ii, jj;
-
-    findRouteStarts(chromosomes,
-                    node_coords,
-                    node_demands,
-                    route_starts);
 
     // offset to this work item
     chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
@@ -813,11 +808,6 @@ __kernel void simpleTSP
 
     // counters
     uint ii, jj, kk, oo;
-
-    findRouteStarts(chromosomes,
-                    node_coords,
-                    node_demands,
-                    route_starts);
 
     // offset
     chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;

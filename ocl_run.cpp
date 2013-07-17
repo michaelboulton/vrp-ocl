@@ -322,6 +322,9 @@ alg_result_t OCLLearn::run
         // mutate
         ENQUEUE(mutate_kernel);
 
+        // find route starts
+        ENQUEUE(frs_kernel);
+
         // TSP
         TSP_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(TSP_kernel)
