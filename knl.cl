@@ -26,7 +26,7 @@
 #define MUT_SWAP
 #define NUM_SUBROUTES 7
 #define NUM_COORDS 75
-#define CAPACITY 220
+#define MAX_CAPACITY 220
 #define LOCAL_SIZE 256
 #define GLOBAL_SIZE 256
 #define MAX_PER_ROUTE 12
@@ -153,52 +153,46 @@ __kernel void findRouteStarts
 {
     uint group_id = get_group_id(0);
     uint loc_id = get_local_id(0);
-
-    // counters
     uint ii, rr;
-
-    // stuff currently in truck - 0 at first
-    uint cur_capacity = 0;
-
-    // stops in current route - initially 0
-    uint stops_taken = 0;
 
     // increment pointers to point to this thread's chromosome values
     chromosomes  += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
     route_starts += LOCAL_SIZE * NUM_SUBROUTES  * group_id + loc_id * NUM_SUBROUTES;
 
+    // stuff currently in truck - 0 at first
+    uint cargo_left = MAX_CAPACITY;
+
+    // stops in current route - initially 0
+    uint stops_taken = 0;
+
     for(ii = 0; ii < NUM_SUBROUTES; ii++)
     {
-        route_starts[ii] = 0;
+        route_starts[ii] = NUM_NODES;
     }
 
-    // start at route_starts[1]
-    rr = 1;
+    // route_starts[1] always contains 0 - the start of the first route
+    route_starts[1] = 0;
+    // start at route_starts[2]
+    rr = 2;
 
     // for the total length of the chromosome
-    for(ii = 0; ii < NUM_NODES; ii++)
+    for (ii = 0; ii < NUM_NODES; ii++)
     {
-        // ignore depot stops - go back to depot when its full / too many things in route
-        while(DEPOT_NODE == chromosomes[ii])
-        {
-            //ii++;
-            if(++ii >= NUM_NODES) break;
-        }
-
-        cur_capacity += node_demands[chromosomes[ii]];
+        cargo_left -= node_demands[chromosomes[ii]];
 
         // if adding the next node will go over capacity
-        if(cur_capacity > CAPACITY || ++stops_taken >= MAX_PER_ROUTE)
+        if (cargo_left <= MIN_CAPACITY
+        // or too many routes
+        || ++stops_taken >= MAX_PER_ROUTE)
         {
-            stops_taken = 0;
-            cur_capacity = node_demands[chromosomes[ii]];
+            route_starts[rr++] = ii;
 
-            route_starts[++rr] = ii;
+            stops_taken = 0;
+            cargo_left = MAX_CAPACITY - node_demands[chromosomes[ii]];
         }
     }
 
     // route_starts[0] contains number of sub routes
-    // route_starts[1] always contains 0 - the start of the first route
     route_starts[0] = rr;
 }
 
@@ -207,7 +201,7 @@ __kernel void fitness
  __global         float *   const __restrict results,
  __constant const uint2 *   const __restrict node_coords,
  __constant const uint*     const __restrict node_demands,
- __global         int *           __restrict route_starts)
+ __global   const int *           __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
     const uint loc_id = get_local_id(0);
@@ -222,23 +216,12 @@ __kernel void fitness
     // for calculating length of route
     float total_distance = 0.0f;
 
-    // stops in current route
-    uint stops_taken = 1;
-
     uint num_routes = route_starts[0];
+
     for (ii = 1; ii < num_routes; ii++)
     {
-        uint route_end;
-        if (ii < num_routes - 1)
-        {
-            route_end = route_starts[ii + 1];
-        }
-        else
-        {
-            route_end = NUM_NODES;
-        }
-
         uint route_begin = route_starts[ii];
+        uint route_end = route_starts[ii + 1];
 
         total_distance += euclideanDistance(node_coords[DEPOT_NODE],
                                             node_coords[chromosomes[route_begin]]);
@@ -249,7 +232,7 @@ __kernel void fitness
                                                 node_coords[chromosomes[jj + 1]]);
         }
 
-        total_distance += euclideanDistance(node_coords[chromosomes[route_end - 1]],
+        total_distance += euclideanDistance(node_coords[chromosomes[jj]],
                                             node_coords[DEPOT_NODE]);
     }
 
@@ -797,10 +780,9 @@ __kernel void mutate
 
 __kernel void simpleTSP
 (__global         uint*        __restrict chromosomes,
- __global         int*         __restrict route_starts,
+ __global   const int*         __restrict route_starts,
  __constant const uint2* const __restrict node_coords,
- __constant const uint*  const __restrict node_demands,
- __global         uint2* const __restrict state)
+ __constant const uint*  const __restrict node_demands)
 {
     uint glob_id = get_global_id(0);
     uint loc_id = get_local_id(0);
@@ -834,19 +816,10 @@ __kernel void simpleTSP
     {
         // beginning and end of current route, including depot stops
         uint route_begin = route_starts[ii];
+        uint route_end = route_starts[ii + 1];
 
         // current route to look at
         uint* const current_subroute = chromosome + route_begin;
-
-        uint route_end;
-        if (ii < num_routes - 1)
-        {
-            route_end = route_starts[ii + 1];
-        }
-        else
-        {
-            route_end = NUM_NODES;
-        }
 
         // length of current route
         uint route_length = route_end - route_begin;

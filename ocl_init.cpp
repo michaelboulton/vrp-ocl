@@ -149,11 +149,13 @@ void OCLLearn::initOCL
     /****   options   *******/
 
     std::stringstream options;
-    //options << "-cl-fast-relaxed-math ";
-    //options << "-cl-strict-aliasing ";
-    //options << "-cl-mad-enable ";
-    //options << "-cl-no-signed-zeros ";
+    options << "-cl-fast-relaxed-math ";
+    options << "-cl-mad-enable ";
+    options << "-cl-no-signed-zeros ";
     //options << "-cl-opt-disable ";
+
+    // deprecated
+    //options << "-cl-strict-aliasing ";
 
     // disable testing values
     options << "-DNOTEST ";
@@ -162,7 +164,7 @@ void OCLLearn::initOCL
     options << "-DNUM_NODES=" << info.node_coords.size() - 1 << " ";
     options << "-DNUM_SUBROUTES=" << NUM_SUBROUTES * 2 << " ";
     options << "-DMAX_PER_ROUTE=" << STOPS_PER_ROUTE << " ";
-    options << "-DCAPACITY=" << info.capacity << " ";
+    options << "-DMAX_CAPACITY=" << info.capacity << " ";
     options << "-DMIN_CAPACITY=" << MIN_CAPACITY << " ";
     options << "-DLOCAL_SIZE=" << LOCAL_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
@@ -373,19 +375,11 @@ void OCLLearn::initOCL
         {
             TSP_kernel = cl_knl_t(all_program, "simpleTSP");
         }
-        /*
-        * TODO
-        else
-        {
-            TSP_kernel = cl_knl_t(all_program, "kOpt");
-        }
-        */
 
         TSP_kernel.setArg(0, buffers.at("parents"));
         TSP_kernel.setArg(1, buffers.at("starts"));
         TSP_kernel.setArg(2, buffers.at("coords"));
         TSP_kernel.setArg(3, buffers.at("demands"));
-        TSP_kernel.setArg(4, buffers.at("rand_state"));
     }
     catch(cl::Error e)
     {
