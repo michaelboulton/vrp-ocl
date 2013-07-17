@@ -726,8 +726,14 @@ __kernel void mutate
         // reverse a random section of the chromosome
         uint ll, uu, range;
 
-        ll = MWC64X(&state[glob_id]) % NUM_NODES;
-        range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
+        // try to make it a certain size
+        while ((ll = MWC64X(&state[glob_id]) % NUM_NODES) > NUM_NODES / 2);
+        while ((range = MWC64X(&state[glob_id]) % (NUM_NODES - ll)) < NUM_NODES / 3);
+
+        // original
+        //ll = MWC64X(&state[glob_id]) % NUM_NODES;
+        //range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
+
         uu = ll + range;
 
         for(; ll < uu; ll++, uu--)
@@ -786,9 +792,7 @@ __kernel void mutate
         // how much to slide this chunk left by
         slide = MWC64X(&state[glob_id]) % lb;
 
-        jj = 0;
-
-        for (ii = lb; ii < range+lb; ii++, jj++)
+        for (ii = lb, jj = 0; ii < range+lb; ii++, jj++)
         {
             SWAP(chromosome[ii], chromosome[jj]);
         }
