@@ -196,7 +196,7 @@ void findRouteStarts
     }
 
     // route_starts[0] contains number of sub routes
-    // route_starts[1] always contains 1 - the start of the first route
+    // route_starts[1] always contains 0 - the start of the first route
     route_starts[0] = rr;
 }
 
@@ -213,55 +213,50 @@ __kernel void fitness
     const uint loc_id = get_local_id(0);
     const uint group_id = get_group_id(0);
 
-    // offset to this work item
-    __global const uint* const chromosome = 
-        chromosomes + LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
-
     uint ii, jj;
 
-    uint cur_capacity = 0;
+    findRouteStarts(chromosomes,
+                    node_coords,
+                    node_demands,
+                    route_starts);
+
+    // offset to this work item
+    chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+    route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
+
     // for calculating length of route
     float total_distance = 0.0f;
-
-    // add distance and capacity for first node
-    total_distance += euclideanDistance(node_coords[DEPOT_NODE],
-                                        node_coords[chromosome[0]]);
-    cur_capacity += node_demands[chromosome[0]];
 
     // stops in current route
     uint stops_taken = 1;
 
-    // TODO change this to use route_starts instead of doing it again
-    for(ii = 0, jj = 1;
-    ii < NUM_NODES - 1 && jj < NUM_NODES;
-    ii++, jj++)
+    uint num_routes = route_starts[0];
+    for (ii = 1; ii < num_routes; ii++)
     {
-        cur_capacity += node_demands[chromosome[jj]];
-
-        // if adding the next node will go over capacity
-        if(cur_capacity > CAPACITY || ++stops_taken >= MAX_PER_ROUTE)
+        uint route_end;
+        if (ii < num_routes - 1)
         {
-            // add distance to and from depot
-            total_distance += euclideanDistance(node_coords[chromosome[ii]],
-                                                node_coords[DEPOT_NODE]);
-            total_distance += euclideanDistance(node_coords[DEPOT_NODE],
-                                                node_coords[chromosome[jj]]);
-
-            // reset
-            stops_taken = 1;
-            cur_capacity = node_demands[chromosome[jj]];
+            route_end = route_starts[ii + 1];
         }
         else
         {
-            total_distance += euclideanDistance(node_coords[chromosome[ii]],
-                                                node_coords[chromosome[jj]]);
+            route_end = NUM_NODES;
         }
+
+        uint route_begin = route_starts[ii];
+
+        total_distance += euclideanDistance(node_coords[DEPOT_NODE],
+                                            node_coords[chromosomes[route_begin]]);
+
+        for (jj = route_begin; jj < route_end - 1; jj++)
+        {
+            total_distance += euclideanDistance(node_coords[chromosomes[jj]],
+                                                node_coords[chromosomes[jj + 1]]);
+        }
+
+        total_distance += euclideanDistance(node_coords[chromosomes[route_end - 1]],
+                                            node_coords[DEPOT_NODE]);
     }
-
-    // add distance to last node
-    total_distance += euclideanDistance(node_coords[chromosome[NUM_NODES - 1]],
-                                        node_coords[DEPOT_NODE]);
-
 
     results[glob_id] = total_distance;
 }
