@@ -122,6 +122,8 @@ float OCLLearn::getBestRoute
     unsigned int jj;
 
     // find fitness (length) of routes and copy back
+    frs_kernel.setArg(0, buffers.at("parents"));
+    ENQUEUE(frs_kernel);
     fitness_kernel.setArg(0, buffers.at("parents"));
     ENQUEUE(fitness_kernel);
 
@@ -264,7 +266,9 @@ alg_result_t OCLLearn::run
     TSP_kernel.setArg(0, buffers.at("parents"));
     ENQUEUE(TSP_kernel)
 
-    // fitness
+    frs_kernel.setArg(0, buffers.at("parents"));
+    ENQUEUE(frs_kernel);
+
     fitness_kernel.setArg(0, buffers.at("parents"));
     ENQUEUE(fitness_kernel)
 
@@ -327,7 +331,7 @@ alg_result_t OCLLearn::run
         ENQUEUE(frs_kernel);
 
         // TSP
-        TSP_kernel.setArg(0, buffers.at("children"));
+        //TSP_kernel.setArg(0, buffers.at("children"));
         //ENQUEUE(TSP_kernel)
 
         // calculae fitness

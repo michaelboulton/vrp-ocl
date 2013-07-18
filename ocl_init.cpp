@@ -337,9 +337,8 @@ void OCLLearn::initOCL
         frs_kernel = cl_knl_t(all_program, "findRouteStarts");
 
         frs_kernel.setArg(0, buffers.at("parents"));
-        frs_kernel.setArg(1, buffers.at("coords"));
-        frs_kernel.setArg(2, buffers.at("demands"));
-        frs_kernel.setArg(3, buffers.at("starts"));
+        frs_kernel.setArg(1, buffers.at("demands"));
+        frs_kernel.setArg(2, buffers.at("starts"));
     }
     catch(cl::Error e)
     {
@@ -357,8 +356,7 @@ void OCLLearn::initOCL
         fitness_kernel.setArg(0, buffers.at("parents"));
         fitness_kernel.setArg(1, buffers.at("results"));
         fitness_kernel.setArg(2, buffers.at("coords"));
-        fitness_kernel.setArg(3, buffers.at("demands"));
-        fitness_kernel.setArg(4, buffers.at("starts"));
+        fitness_kernel.setArg(3, buffers.at("starts"));
     }
     catch(cl::Error e)
     {

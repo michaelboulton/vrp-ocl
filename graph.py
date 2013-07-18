@@ -26,146 +26,87 @@ import re
 import sys
 import math
 
+# keep same as in C++
+MAX_CAPACITY = 220
+MIN_CAPACITY = 2
+NUM_SUBROUTES = 7;
+STOPS_PER_ROUTE = 14;
+
 colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm', 'r'] # TODO change to another colour
 
-def length(best, nodes):
-    # double check length
-    ind = [int(i) for i in best.split()]
-    total = 0
-    for ii in xrange(len(ind)-1):
-        x1 = (nodes[ind[ii]][0])
-        y1 = (nodes[ind[ii]][1])
+def length(p1, p2, nodes):
+    return math.sqrt((nodes[p1][1]-nodes[p2][1])**2 +
+                     (nodes[p1][0]-nodes[p2][0])**2 )
 
-        x2 = (nodes[ind[ii+1]][0])
-        y2 = (nodes[ind[ii+1]][1])
-        total += math.sqrt( (y1-y2)**2 + (x1-x2)**2 )
+def graph_plot(route, nodes, demands):
 
-    return total
+    best_len = 10000.0
+    route_split = []
 
-def old_plot(best, split_best, demands, nodes, x, y):
-    total = length(best, nodes)
-    print "Total length", total
+    for MC in xrange(MAX_CAPACITY-20, MAX_CAPACITY):
+        for ST in xrange(4, STOPS_PER_ROUTE):
+            #  subroutes split up
+            cur_route = []
+            subroute = []
 
-    fig=plt.figure()
+            capacity = MC
+
+            # initial leaving depot
+            subroute.append(1)
+            stop_count = 0
+
+            for i in route:
+                capacity -= demands[i]
+                stop_count += 1
+
+                if capacity <= MIN_CAPACITY or stop_count >= ST:
+                    subroute.append(1)
+                    cur_route.append(subroute)
+
+                    # reset
+                    capacity = MAX_CAPACITY
+                    subroute = [1]
+                    stop_count = 1
+
+                    # add node
+                    subroute.append(i)
+                    capacity -= demands[i]
+                else:
+                    subroute.append(i)
+
+            # final return to depot
+            subroute.append(1)
+            cur_route.append(subroute)
+
+            # calculate length
+            total_distance = 0.0
+            for rr in cur_route:
+                for i in xrange(len(rr) - 1):
+                    total_distance += length(rr[i], rr[i+1], nodes)
+
+            if total_distance < best_len:
+                best_len = total_distance
+                route_split = cur_route
+
+    # plot
+    fig = plt.figure()
     data = fig.add_subplot(111)
-    data.scatter(x,y, marker='x', c='k')
-    #print split_best
-    for route in split_best:
-        print route,
-        split_route = route.split()
+    data.scatter([i[0] for i in nodes.values()],
+                 [i[1] for i in nodes.values()],
+                 marker='x', c='k')
 
-        sum_len = 0
-        for i in split_route:
-            #print sum_len,"+",
-            #print demands[i],"=",
-            sum_len += int(demands[i])
-            #print sum_len
-        print "- capacity", sum_len,
-        if sum_len > 220:
-            print "- OVER CAPACITY - INVALID ROUTE"
-        else:
-            print
+    for rr in route_split:
+        colour = colours[route_split.index(rr) % len(colours)]
+        coords = [nodes[i] for i in rr]
+        plt.plot([i[0] for i in coords],
+                 [i[1] for i in coords],
+                 c=colour)
 
-        line_taken_x = [x[int(ii)-1] for ii in split_route]
-        line_taken_y = [y[int(ii)-1] for ii in split_route]
-
-        colour = colours[split_best.index(route) % len(colours)]
-        plt.plot(line_taken_x, line_taken_y, c=colour)
+    print best_len
 
     plt.show()
 
-def new_plot(best, split_best, demands, nodes, x, y):
-
-    whole_route = []
-    for i in split_best:
-        for o in i.split():
-            whole_route.append(o)
-
-    for x in whole_route:
-        if x == '1':
-            del whole_route[whole_route.index(x)]
-
-    cur_cap = 0
-
-    best_route = ""
-    best_len = 1000000
-    weird_best = ""
-
-    for max_cap in xrange(max([int(i) for i in demands])+10, 220):
-        for rl in xrange(3, 20):
-            cur_count = 0
-            new_route = "1 "
-            weird_route = "1->"
-            while(1):
-                
-                # number of stops stopped at so far
-                stop_count = 0
-                cur_cap = 0
-
-                for ii in xrange(cur_count, len(whole_route)):
-
-                    cur_cap += int(demands[whole_route[ii]])
-                    stop_count += 1
-
-                    # if max specs for subroute have been reached
-                    if cur_cap > max_cap or stop_count >= rl:
-                        new_route += '1 '
-                        weird_route += '1\n1->'
-                        break
-                    else:
-                        new_route += (whole_route[ii])
-                        new_route += (' ')
-                        weird_route += str(int(whole_route[ii]))
-                        weird_route += '->'
-                        cur_count += 1
-                if cur_count >= len(whole_route):
-                    break
-            new_route += ('1')
-            weird_route += ('1')
-            new_len = length(new_route, nodes)
-            if new_len < best_len:
-                best_route = new_route
-                best_len = new_len
-                weird_best = weird_route
-    print weird_best
-    return best_route
-
-def plot(best_in, recurse):
-
-    x = numpy.zeros(76)
-    y = numpy.zeros(76)
-    icount = 0
-    best = best_in.strip()
-
-    with open('fruitybun-data.vrp') as sett_file:
-        at_node=False
-        at_demand=False
-        for line in sett_file:
-            if "NODE_" in line:
-                at_node=True
-            elif at_node==True:
-                if "DEMAND_" in line:
-                    at_node=False
-                    at_demand=True
-                    break
-                else:
-                    line = line.split()
-                    x[icount] = line[1]
-                    y[icount] = line[2]
-                    icount+=1
-
-    split_best = best.split(' 1 ')
-    # add depot to them
-    for oo in split_best:
-        if not oo.startswith('1 '):
-            ii = split_best.index(oo)
-            oo = '1 ' + oo
-            split_best[ii] = oo
-    for oo in split_best:
-        if not oo.endswith(' 1'):
-            ii = split_best.index(oo)
-            oo = oo + ' 1'
-            split_best[ii] = oo
+def parse(route):
 
     demands = {}
     # load demands
@@ -179,7 +120,7 @@ def plot(best_in, recurse):
                 break
             else:
                 dem_line = line.split()
-                demands[str(int(dem_line[0]))] = dem_line[1]
+                demands[int(dem_line[0])] = int(dem_line[1])
 
     nodes = {}
     # load nodes
@@ -192,27 +133,19 @@ def plot(best_in, recurse):
                 break
             else:
                 dem_line = line.split()
-                nodes[(int(dem_line[0]))] = int(dem_line[1]),int(dem_line[2])
+                nodes[int(dem_line[0])] = int(dem_line[1]),int(dem_line[2])
 
-    if recurse:
-        new_best = best_in.lstrip('1 ').rstrip('1').rstrip(' ').split(' 1 ')
-        modified = new_plot(best, new_best, demands, nodes, x, y)
-        plot(modified, False)
-    else:
+    found = []
+    # check to find duplicates or missing ones
+    for i in route:
+        if i in found:
+            print i, "already in route - first at", route.index(i)
+        found.append(i)
+    for i in xrange(2, len(nodes)+1):
+        if not i in route:
+            print i, "not found in route"
 
-        found = []
-        # check to find duplicates or missing ones
-        for i in best.split():
-            if not i=='1' and i in found:
-                print i, "already in route - first at", best.split().index(i)
-            found.append(i)
-        for i in xrange(1,76):
-            if not str(i) in  best.split():
-                print i, "not found in route"
-
-        print split_best
-        old_plot(best, split_best, demands, nodes, x, y)
-        exit(1)
+    graph_plot(route, nodes, demands)
 
 if __name__ == '__main__':
     if len(sys.argv) == 1:
@@ -224,4 +157,6 @@ if __name__ == '__main__':
             best_in += str(i)
             best_in += " "
 
-    plot(best_in, True)
+    best_in = [int(i) for i in best_in.split()]
+    parse(best_in)
+

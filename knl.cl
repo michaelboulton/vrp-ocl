@@ -38,7 +38,7 @@ typedef struct sort_info {
     // length of route - used to compare
     float route_length;
     // index of route in parent/children (could be either)
-    __global const uint* idx;
+    __global const uint * const idx;
 } sort_t;
 
 /*
@@ -63,25 +63,12 @@ inline uint MWC64X(__global uint2* const state)
 /*
  *  Returns euclidean distance between two points
  */
-#if 0
+#if 1
+// function version makes whole thing run ~10% faster than macro version ???
 inline float euclideanDistance
-(uint2 first, uint2 second)
+(const uint2 first,
+ const uint2 second)
 {
-    /*
-    float x1, y1, x2, y2;
-
-    x1 = first.first;
-    y1 = first.second;
-    x2 = second.first;
-    y2 = second.second;
-
-    // native is a bit quicker?
-    return native_sqrt(((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1)));
-
-    const float2 a = (float2)(first.x, first.y);
-    const float2 b = (float2)(second.x, second.y);
-    */
-
     return fast_distance(convert_float2(first), convert_float2(second));
 }
 #else
@@ -91,7 +78,7 @@ inline float euclideanDistance
 #endif
 
 /*
- *  Returns how long a subroute is
+ *  Returns how long a subroute is - used in TSP
  */
 float subrouteLength
 (                 uint*  const __restrict route,
@@ -114,8 +101,7 @@ float subrouteLength
  *  Goes through the array for the range specified and sees if the value passed
  *  is already in it
  */
-inline
-bool contains
+inline bool contains
 (int * arr, int val, int lb, int range)
 {
     for (int ii = lb; ii < lb+range; ii++)
@@ -144,36 +130,41 @@ bool contains
  *  For example, for a route 1 2 3 4 5 6 7 8 9, the subroute starts might be at
  *  position 0, 4, and 7. This route is split up into subroutes 1-2-3-4, 5-6-7,
  *  and 8-9.
+ *
+ *  route_starts[0] = 3
+ *  route_starts[1] = 0
+ *  route_starts[2] = 4
+ *  route_starts[3] = 7
+ *  route_starts[4] = NUM_NODES
  */
 __kernel void findRouteStarts
-(__global   const uint*        __restrict chromosomes,
- __constant const uint2* const __restrict node_coords,
- __constant const uint*  const __restrict node_demands,
- __global         int*         __restrict route_starts)
+(__global   const uint *       __restrict chromosomes,
+ __constant const uint * const __restrict node_demands,
+ __global         int *        __restrict route_starts)
 {
     uint group_id = get_group_id(0);
     uint loc_id = get_local_id(0);
     uint ii, rr;
 
     // increment pointers to point to this thread's chromosome values
-    chromosomes  += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
-    route_starts += LOCAL_SIZE * NUM_SUBROUTES  * group_id + loc_id * NUM_SUBROUTES;
+    chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
+    route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
 
-    // stuff currently in truck - 0 at first
+    // stuff currently in truck - starts fully loaded
     uint cargo_left = MAX_CAPACITY;
 
     // stops in current route - initially 0
     uint stops_taken = 0;
 
-    for(ii = 0; ii < NUM_SUBROUTES; ii++)
+    // initialise all of them with the max value
+    for (ii = 0; ii < NUM_SUBROUTES; ii++)
     {
         route_starts[ii] = NUM_NODES;
     }
 
     // route_starts[1] always contains 0 - the start of the first route
     route_starts[1] = 0;
-    // start at route_starts[2]
-    rr = 2;
+    rr = 1;
 
     // for the total length of the chromosome
     for (ii = 0; ii < NUM_NODES; ii++)
@@ -185,9 +176,9 @@ __kernel void findRouteStarts
         // or too many routes
         || ++stops_taken >= MAX_PER_ROUTE)
         {
-            route_starts[rr++] = ii;
+            route_starts[++rr] = ii;
 
-            stops_taken = 0;
+            stops_taken = 1;
             cargo_left = MAX_CAPACITY - node_demands[chromosomes[ii]];
         }
     }
@@ -197,11 +188,10 @@ __kernel void findRouteStarts
 }
 
 __kernel void fitness
-(__global   const uint *          __restrict chromosomes,
- __global         float *   const __restrict results,
- __constant const uint2 *   const __restrict node_coords,
- __constant const uint*     const __restrict node_demands,
- __global   const int *           __restrict route_starts)
+(__global   const uint *        __restrict chromosomes,
+ __global         float * const __restrict results,
+ __constant const uint2 * const __restrict node_coords,
+ __global   const int *         __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
     const uint loc_id = get_local_id(0);
@@ -218,7 +208,8 @@ __kernel void fitness
 
     uint num_routes = route_starts[0];
 
-    for (ii = 1; ii < num_routes; ii++)
+    // start at 1 and go to +1 as [0] contains num_routes
+    for (ii = 1; ii < num_routes + 1; ii++)
     {
         uint route_begin = route_starts[ii];
         uint route_end = route_starts[ii + 1];
@@ -259,10 +250,9 @@ __kernel void ParallelBitonic_NonElitist
 
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
-    sort_t sort_pair;
-    sort_pair.route_length = route_lengths[glob_id];
-    // idx is a pointer to the relevant chromosome
-    sort_pair.idx = chromosomes + LOCAL_SIZE*group_id*NUM_NODES + loc_id*NUM_NODES;
+    sort_t sort_pair = {route_lengths[glob_id], chromosomes +
+                                                LOCAL_SIZE*group_id*NUM_NODES +
+                                                loc_id*NUM_NODES};
 
     // Load block in AUX[WG]
     aux[ii] = sort_pair;
@@ -311,7 +301,6 @@ __kernel void ParallelBitonic_Elitist
     int ii = get_local_id(0); // index in workgroup
     int group_id = get_group_id(0) ;
     int loc_id = get_local_id(0) ;
-    int loc_div;
 
     __local sort_t aux[LOCAL_SIZE * 4];
 
@@ -322,6 +311,9 @@ __kernel void ParallelBitonic_Elitist
     // uses the current thread index and length of route to sort, then whatever
     // thread ends up with it in its index in the local array copies it back out to the output
     sort_t sort_pair;
+
+  #if 0
+    int loc_div = loc_id / 2;
 
     // if an even item in the work group
     if(loc_id > LOCAL_SIZE)
@@ -338,6 +330,22 @@ __kernel void ParallelBitonic_Elitist
         sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
+  #else
+    // FIXME not working though it seems to be the exact same
+    int loc_div = loc_id / 2;
+
+    // half of work group does parents, half does children
+    if (loc_id % 2)
+    {
+        sort_t sort_pair = {route_lengths[loc_div],
+                            children + LOCAL_SIZE*group_id*NUM_NODES + loc_div*NUM_NODES};
+    }
+    else
+    {
+        sort_t sort_pair = {route_lengths[loc_div + GLOBAL_SIZE],
+                            parents + LOCAL_SIZE*group_id*NUM_NODES + loc_div*NUM_NODES};
+    }
+  #endif
 
     aux[loc_id] = sort_pair;
 
@@ -879,7 +887,7 @@ __kernel void foreignExchange
 {
     uint loc_id = get_local_id(0);
     uint group_id = get_group_id(0);
-    uint num_groups = get_num_groups(0);
+    uint num_groups = GLOBAL_SIZE / LOCAL_SIZE;
 
     // the best item from each group gets swapped
     if (loc_id == 0 && group_id < num_groups / 2)
@@ -892,9 +900,9 @@ __kernel void foreignExchange
         __global uint* foreign_chrom = chromosomes
             + LOCAL_SIZE * (group_id + (num_groups / 2)) * NUM_NODES;
 
-        int rand_offset = MWC64X(&state[get_global_id(0)]) % LOCAL_SIZE;
+        //int rand_offset = MWC64X(&state[get_global_id(0)]) % LOCAL_SIZE;
 
-        foreign_chrom += NUM_NODES * rand_offset;
+        //foreign_chrom += NUM_NODES * rand_offset;
 
         uint tmp_val;
         #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
