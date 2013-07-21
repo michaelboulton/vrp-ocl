@@ -30,9 +30,9 @@ import math
 MAX_CAPACITY = 220
 MIN_CAPACITY = 2
 NUM_SUBROUTES = 7;
-STOPS_PER_ROUTE = 14;
+STOPS_PER_ROUTE = 16;
 
-colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm', 'r'] # TODO change to another colour
+colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm']
 
 def length(p1, p2, nodes):
     return math.sqrt((nodes[p1][1]-nodes[p2][1])**2 +
@@ -43,34 +43,34 @@ def graph_plot(route, nodes, demands):
     best_len = 10000.0
     route_split = []
 
-    for MC in xrange(MAX_CAPACITY-20, MAX_CAPACITY):
+    for MC in xrange(0, 30):
         for ST in xrange(4, STOPS_PER_ROUTE):
             #  subroutes split up
             cur_route = []
             subroute = []
 
-            capacity = MC
+            cargo_left = MAX_CAPACITY
 
             # initial leaving depot
             subroute.append(1)
             stop_count = 0
 
             for i in route:
-                capacity -= demands[i]
+                cargo_left -= demands[i]
                 stop_count += 1
 
-                if capacity <= MIN_CAPACITY or stop_count >= ST:
+                if cargo_left <= MC or stop_count >= ST:
                     subroute.append(1)
+
                     cur_route.append(subroute)
 
                     # reset
-                    capacity = MAX_CAPACITY
+                    cargo_left = MAX_CAPACITY
                     subroute = [1]
                     stop_count = 1
 
-                    # add node
                     subroute.append(i)
-                    capacity -= demands[i]
+                    cargo_left -= demands[i]
                 else:
                     subroute.append(i)
 
@@ -81,12 +81,29 @@ def graph_plot(route, nodes, demands):
             # calculate length
             total_distance = 0.0
             for rr in cur_route:
+                dist = 0.0
                 for i in xrange(len(rr) - 1):
-                    total_distance += length(rr[i], rr[i+1], nodes)
+                    dist += length(rr[i], rr[i+1], nodes)
+                total_distance += dist
 
             if total_distance < best_len:
                 best_len = total_distance
-                route_split = cur_route
+                route_split = cur_route[:]
+
+    # calculate length
+    print "Breakdown: "
+
+    total_distance = 0.0
+    for rr in route_split:
+        dist = 0.0
+        cap = 0
+        for i in xrange(len(rr) - 1):
+            dist += length(rr[i], rr[i+1], nodes)
+            cap += demands[rr[i]]
+        total_distance += dist
+        print rr, " => Capacity %d, Distance %d, Nodes %d" % (cap, dist, len(rr))
+
+    print "Total length =", total_distance
 
     # plot
     fig = plt.figure()
@@ -101,8 +118,6 @@ def graph_plot(route, nodes, demands):
         plt.plot([i[0] for i in coords],
                  [i[1] for i in coords],
                  c=colour)
-
-    print best_len
 
     plt.show()
 

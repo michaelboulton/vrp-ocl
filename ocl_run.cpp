@@ -119,7 +119,6 @@ float OCLLearn::getBestRoute
 
     float results_host[GLOBAL_SIZE];
     float avg = 0.0;
-    unsigned int jj;
 
     // find fitness (length) of routes and copy back
     frs_kernel.setArg(0, buffers.at("parents"));
@@ -164,6 +163,25 @@ float OCLLearn::getBestRoute
                                     (all_chrom_size / GLOBAL_SIZE),
                                 (all_chrom_size / GLOBAL_SIZE),
                                 &best_chromosome.at(0));
+
+        /*
+        int host_starts[NUM_SUBROUTES * 2];
+        queue.enqueueReadBuffer(buffers.at("starts"), CL_TRUE,
+                                load_from *
+                                NUM_SUBROUTES * 2 * sizeof(int)
+                                ,
+                                NUM_SUBROUTES * 2 * sizeof(int)
+                                ,
+                                host_starts);
+        unsigned int jj;
+        std::cout << std::endl;
+        std::cout << std::endl;
+        for (jj = 0; jj < NUM_SUBROUTES * 2; jj++)
+        {
+            std::cout << host_starts[jj] << " ";
+        }
+        std::cout << std::endl;
+        // */
     }
 
     avg = std::accumulate(results_host,
@@ -320,26 +338,32 @@ alg_result_t OCLLearn::run
         // do foreign exchange
         ENQUEUE(fe_kernel)
 
-        // breed
+        // Create new children and mutate them
         ENQUEUE(crossover_kernel)
-
-        // mutate
         ENQUEUE(mutate_kernel);
 
         // find route starts for children
         frs_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(frs_kernel);
 
-        // TSP
-        //TSP_kernel.setArg(0, buffers.at("children"));
-        //ENQUEUE(TSP_kernel)
+        // TSP 
+        /*
+         *  The simple TSP thing does get much better results but its slow as
+         *  heck - only do it every so often so that it doesn't slow down the
+         *  whole program but does get better results
+         */
+        if (!(ii % 10))
+        {
+            TSP_kernel.setArg(0, buffers.at("children"));
+            ENQUEUE(TSP_kernel)
+        }
 
         // calculae fitness
         fitness_kernel.setArg(0, buffers.at("children"));
         ENQUEUE(fitness_kernel)
 
         // sort all chromosomes based on elitism choice
-        if(ELITIST == sort_strategy)
+        if (ELITIST == sort_strategy)
         {
             static cl::NDRange fitness_offset(GLOBAL_SIZE);
 
@@ -393,16 +417,19 @@ alg_result_t OCLLearn::run
          *  openmp task parallel to launch it asynchronously
          */
 
-        // see if a better route has been created
-        getBestRoute(new_best, best_chromosome);
+        // see if a better route has been created - every so often to stop spam
+        if (!(ii % 10) || ii == GENERATIONS)
+        {
+            getBestRoute(new_best, best_chromosome);
+        }
 
         if (new_best < best_route)
         {
             best_route = new_best;
+
             #ifdef VERBOSE
             std::cout << std::endl;
-            unsigned int real_sz = best_chromosome.size();
-            for(jj = 0; jj < real_sz; jj++)
+            for(jj = 0; jj < best_chromosome.size(); jj++)
             {
                 std::cout << best_chromosome.at(jj) << " ";
             }
