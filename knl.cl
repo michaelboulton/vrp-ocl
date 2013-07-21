@@ -1,16 +1,16 @@
 /*
  *  Copyright (c) 2013 Michael Boulton
- *  
+ *
  *  Permission is hereby granted, free of charge, to any person obtaining a copy
  *  of this software and associated documentation files (the "Software"), to deal
  *  in the Software without restriction, including without limitation the rights
  *  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *  copies of the Software, and to permit persons to whom the Software is
  *  furnished to do so, subject to the following conditions:
- *  
+ *
  *  The above copyright notice and this permission notice shall be included in
  *  all copies or substantial portions of the Software.
- *  
+ *
  *  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -69,12 +69,12 @@ inline float euclideanDistance
 (const uint2 first,
  const uint2 second)
 {
-    return fast_distance(convert_float2(first), convert_float2(second));
+    return distance(convert_float2(first), convert_float2(second));
 }
 #else
-#define euclideanDistance(first,second)     \
-    (fast_distance(convert_float2(first),   \
-                   convert_float2(second)))
+#define euclideanDistance(first,second) \
+    (distance(convert_float2(first),    \
+              convert_float2(second)))
 #endif
 
 /*
@@ -151,7 +151,7 @@ __kernel void findRouteStarts
     route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
 
     // stuff currently in truck - starts fully loaded
-    uint cargo_left = MAX_CAPACITY;
+    int cargo_left = MAX_CAPACITY;
 
     // stops in current route - initially 0
     uint stops_taken = 0;
@@ -159,7 +159,7 @@ __kernel void findRouteStarts
     // initialise all of them with the max value
     for (ii = 0; ii < NUM_SUBROUTES; ii++)
     {
-        route_starts[ii] = NUM_NODES;
+        route_starts[ii] = NUM_NODES - 1;
     }
 
     // route_starts[1] always contains 0 - the start of the first route
@@ -170,12 +170,14 @@ __kernel void findRouteStarts
     for (ii = 0; ii < NUM_NODES; ii++)
     {
         cargo_left -= node_demands[chromosomes[ii]];
+        stops_taken += 1;
 
         // if adding the next node will go over capacity
         if (cargo_left <= MIN_CAPACITY
         // or too many routes
-        || ++stops_taken >= MAX_PER_ROUTE)
+        || stops_taken >= MAX_PER_ROUTE)
         {
+            // new route would have to start here
             route_starts[++rr] = ii;
 
             // reset
@@ -190,6 +192,7 @@ __kernel void findRouteStarts
     route_starts[0] = rr;
 }
 
+// TODO - take in min capacity and stops per route as parameter
 __kernel void fitness
 (__global   const uint *        __restrict chromosomes,
  __global         float * const __restrict results,
@@ -209,26 +212,32 @@ __kernel void fitness
     // for calculating length of route
     float total_distance = 0.0f;
 
-    uint num_routes = route_starts[0];
+    jj = 2;
 
-    // start at 1 and go to +1 as [0] contains num_routes
-    for (ii = 1; ii < num_routes + 1; ii++)
+    total_distance += euclideanDistance(node_coords[DEPOT_NODE],
+                                        node_coords[chromosomes[0]]);
+
+    for (ii = 0; ii < NUM_NODES - 1; ii++)
     {
-        uint route_begin = route_starts[ii];
-        uint route_end = route_starts[ii + 1];
-
-        total_distance += euclideanDistance(node_coords[DEPOT_NODE],
-                                            node_coords[chromosomes[route_begin]]);
-
-        for (jj = route_begin; jj < route_end - 1; jj++)
+        // beginning of new route
+        if (ii + 1 == route_starts[jj])
         {
-            total_distance += euclideanDistance(node_coords[chromosomes[jj]],
-                                                node_coords[chromosomes[jj + 1]]);
-        }
+            total_distance += euclideanDistance(node_coords[chromosomes[ii]],
+                                                node_coords[DEPOT_NODE]);
+            total_distance += euclideanDistance(node_coords[DEPOT_NODE],
+                                                node_coords[chromosomes[ii + 1]]);
 
-        total_distance += euclideanDistance(node_coords[chromosomes[jj]],
-                                            node_coords[DEPOT_NODE]);
+            jj++;
+        }
+        else
+        {
+            total_distance += euclideanDistance(node_coords[chromosomes[ii]],
+                                                node_coords[chromosomes[ii + 1]]);
+        }
     }
+
+    total_distance += euclideanDistance(node_coords[chromosomes[ii]],
+                                        node_coords[DEPOT_NODE]);
 
     results[glob_id] = total_distance;
 }

@@ -149,13 +149,11 @@ void OCLLearn::initOCL
     /****   options   *******/
 
     std::stringstream options;
-    options << "-cl-fast-relaxed-math ";
-    options << "-cl-mad-enable ";
-    options << "-cl-no-signed-zeros ";
-    //options << "-cl-opt-disable ";
+    //options << "-cl-fast-relaxed-math ";
+    //options << "-cl-mad-enable ";
+    //options << "-cl-no-signed-zeros ";
 
-    // deprecated
-    //options << "-cl-strict-aliasing ";
+    //options << "-cl-opt-disable ";
 
     // disable testing values
     options << "-DNOTEST ";
@@ -168,7 +166,6 @@ void OCLLearn::initOCL
     options << "-DMIN_CAPACITY=" << MIN_CAPACITY << " ";
     options << "-DLOCAL_SIZE=" << LOCAL_SIZE << " ";
     options << "-DGLOBAL_SIZE=" << GLOBAL_SIZE << " ";
-    options << "-DK_OPT=" << tsp_strategy << " ";
     options << "-DDEPOT_NODE=" << info.depot_node << " ";
     options << "-DARENA_SIZE=" << ARENA_SIZE << " ";
 
@@ -198,6 +195,7 @@ void OCLLearn::initOCL
         options << "-DMUT_SWAP ";
     }
 
+    // which breed algorithm to use
     if (breed_strategy == CX)
     {
         options << "-DBREED_CX ";
@@ -247,9 +245,9 @@ void OCLLearn::initOCL
                               NUM_SUBROUTES * 2 * GLOBAL_SIZE * sizeof(int));
     buffers["starts"] = route_starts_buf;
 
-    // start with size 1, corresponding to depot 0
+    // start with size 1 - no node 0
     point_vec_t dev_coords(1);
-    std::vector<cl_uint> dev_demands(1);
+    std::vector<cl_uint> dev_demands(1, 1000);
 
     // FIXME hacky?
     for (ii = 1; ii < info.node_coords.size()+1; ii++)
@@ -336,7 +334,6 @@ void OCLLearn::initOCL
     {
         frs_kernel = cl_knl_t(all_program, "findRouteStarts");
 
-        frs_kernel.setArg(0, buffers.at("parents"));
         frs_kernel.setArg(1, buffers.at("demands"));
         frs_kernel.setArg(2, buffers.at("starts"));
     }
@@ -353,7 +350,6 @@ void OCLLearn::initOCL
     {
         fitness_kernel = cl_knl_t(all_program, "fitness");
 
-        fitness_kernel.setArg(0, buffers.at("parents"));
         fitness_kernel.setArg(1, buffers.at("results"));
         fitness_kernel.setArg(2, buffers.at("coords"));
         fitness_kernel.setArg(3, buffers.at("starts"));
@@ -374,7 +370,6 @@ void OCLLearn::initOCL
             TSP_kernel = cl_knl_t(all_program, "simpleTSP");
         }
 
-        TSP_kernel.setArg(0, buffers.at("parents"));
         TSP_kernel.setArg(1, buffers.at("starts"));
         TSP_kernel.setArg(2, buffers.at("coords"));
         TSP_kernel.setArg(3, buffers.at("demands"));
@@ -393,7 +388,6 @@ void OCLLearn::initOCL
         ne_sort_kernel = cl_knl_t(all_program, "ParallelBitonic_NonElitist");
 
         ne_sort_kernel.setArg(0, buffers.at("results"));
-        ne_sort_kernel.setArg(1, buffers.at("parents"));
         ne_sort_kernel.setArg(2, buffers.at("sorted"));
     }
     catch(cl::Error e)
