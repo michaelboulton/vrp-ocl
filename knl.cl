@@ -182,7 +182,9 @@ __kernel void findRouteStarts
 
             // reset
             stops_taken = 1;
-            cargo_left = MAX_CAPACITY - node_demands[chromosomes[ii]];
+            cargo_left = MAX_CAPACITY;
+
+            cargo_left -= node_demands[chromosomes[ii]];
         }
     }
 
