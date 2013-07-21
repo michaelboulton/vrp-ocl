@@ -34,7 +34,7 @@ breed_e breed_strategy = PMX;
 
 int MUTRATE = 25;
 unsigned int NUM_SUBROUTES = 7;
-unsigned int STOPS_PER_ROUTE = 14;
+unsigned int STOPS_PER_ROUTE = 12;
 unsigned int MIN_CAPACITY = 2;
 unsigned int RAND_THRESHOLD = 95;
 unsigned int ARENA_SIZE = 8;

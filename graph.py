@@ -30,7 +30,7 @@ import math
 MAX_CAPACITY = 220
 MIN_CAPACITY = 2
 NUM_SUBROUTES = 7;
-STOPS_PER_ROUTE = 14;
+STOPS_PER_ROUTE = 12;
 
 colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm', 'r'] # TODO change to another colour
 
@@ -44,7 +44,7 @@ def graph_plot(route, nodes, demands):
     route_split = []
 
     for MC in xrange(MAX_CAPACITY-20, MAX_CAPACITY):
-        for ST in xrange(4, STOPS_PER_ROUTE):
+        for ST in xrange(8, STOPS_PER_ROUTE):
             #  subroutes split up
             cur_route = []
             subroute = []
