@@ -38,7 +38,7 @@ typedef struct sort_info {
     // length of route - used to compare
     float route_length;
     // index of route in parent/children (could be either)
-    __global const uint * const idx;
+    __global const uint * idx;
 } sort_t;
 
 /*
@@ -102,7 +102,7 @@ float subrouteLength
  *  is already in it
  */
 inline bool contains
-(int * arr, int val, int lb, int range)
+(uint * arr, int val, int lb, int range)
 {
     for (int ii = lb; ii < lb+range; ii++)
     {
@@ -322,7 +322,6 @@ __kernel void ParallelBitonic_Elitist
     // thread ends up with it in its index in the local array copies it back out to the output
     sort_t sort_pair;
 
-  #if 0
     int loc_div = loc_id / 2;
 
     // if an even item in the work group
@@ -340,22 +339,6 @@ __kernel void ParallelBitonic_Elitist
         sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
-  #else
-    // FIXME not working though it seems to be the exact same
-    int loc_div = loc_id / 2;
-
-    // half of work group does parents, half does children
-    if (loc_id % 2)
-    {
-        sort_t sort_pair = {route_lengths[loc_div],
-                            children + LOCAL_SIZE*group_id*NUM_NODES + loc_div*NUM_NODES};
-    }
-    else
-    {
-        sort_t sort_pair = {route_lengths[loc_div + GLOBAL_SIZE],
-                            parents + LOCAL_SIZE*group_id*NUM_NODES + loc_div*NUM_NODES};
-    }
-  #endif
 
     aux[loc_id] = sort_pair;
 

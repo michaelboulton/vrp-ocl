@@ -46,9 +46,11 @@ size_t LOCAL_SIZE = 32;
 std::string INPUT_FILE("fruitybun-data.vrp");
 int VERBOSE_OUTPUT = 0;
 
-// say max 10 minutes or 20k generations default
-size_t GENERATIONS = 20000;
+// say max 10 minutes or 200k generations default - about the same time on my computer
+size_t GENERATIONS = 200000;
 double MAX_TIME = 360;
+
+bool PROFILER_ON = false;
 
 void parseArgs
 (int argc, char* argv[])

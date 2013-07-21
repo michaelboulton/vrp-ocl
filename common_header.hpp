@@ -24,8 +24,6 @@
 #include <sstream>
 #include <iostream>
 
-#include <limits>
-#include <utility>
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -172,6 +170,12 @@ private:
                                 GLOBAL_SIZE,                \
                                 LOCAL_SIZE);
 
+    // for profiling
+    std::map<std::string, double> kernel_times;
+
+    // for seeing which populations have gone stale
+    std::vector<float> pop_routes;
+
 public:
 
     alg_result_t run
@@ -254,7 +258,12 @@ extern int DEVICE_TYPE;
 extern size_t GLOBAL_SIZE;
 extern size_t LOCAL_SIZE;
 
+// file to read input from
 extern std::string INPUT_FILE;
 
+// max time to run for
 extern double MAX_TIME;
+
+// whether to profile kernels
+extern bool PROFILER_ON;
 

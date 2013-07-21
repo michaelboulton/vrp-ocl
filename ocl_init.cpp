@@ -144,7 +144,18 @@ void OCLLearn::initOCL
     default:
         device = devices.at(0);
     }
-    queue = cl::CommandQueue(context, device);
+
+    // initialise command queue
+    if (PROFILER_ON)
+    {
+        // turn on profiling
+        queue = cl::CommandQueue(context, device,
+                                 CL_QUEUE_PROFILING_ENABLE, NULL);
+    }
+    else
+    {
+        queue = cl::CommandQueue(context, device);
+    }
 
     /****   options   *******/
 
@@ -470,6 +481,9 @@ OCLLearn::OCLLearn
                      * GLOBAL_SIZE * sizeof(cl_uint);
 
     initOCL();
+
+    // one element per population
+    pop_routes = std::vector<float>(GLOBAL_SIZE/LOCAL_SIZE);
 
     all_stops = route_vec_t(run_info.node_coords.size(), 0);
 

@@ -87,11 +87,44 @@ const cl::NDRange local_range)
 {
     try
     {
-        // just launch kernel
-        queue.enqueueNDRangeKernel(kernel,
-                                   offset_range,
-                                   global_range,
-                                   local_range);
+        if (PROFILER_ON)
+        {
+            // time it
+            static cl::Event prof_event;
+            static cl_ulong start, end;
+            static std::string func_name;
+
+            queue.enqueueNDRangeKernel(kernel,
+                                       offset_range,
+                                       global_range,
+                                       local_range,
+                                       NULL,
+                                       &prof_event);
+            prof_event.wait();
+
+            prof_event.getProfilingInfo(CL_PROFILING_COMMAND_START, &start);
+            prof_event.getProfilingInfo(CL_PROFILING_COMMAND_END, &end);
+            double taken = static_cast<double>(end-start)*1.0e-6;
+
+            kernel.getInfo(CL_KERNEL_FUNCTION_NAME, &func_name);
+
+            if (kernel_times.end() != kernel_times.find(func_name))
+            {
+                kernel_times.at(func_name) += taken;
+            }
+            else
+            {
+                kernel_times[func_name] = taken;
+            }
+        }
+        else
+        {
+            // just launch kernel
+            queue.enqueueNDRangeKernel(kernel,
+                                       offset_range,
+                                       global_range,
+                                       local_range);
+        }
     }
     catch (cl::Error e)
     {
@@ -143,6 +176,16 @@ float OCLLearn::getBestRoute
         throw e;
     }
 
+    /*
+     *  TODO - if a population goes stale for ~50-100 generations, generate
+     *  a new set of chromosomes, send to device, go again. Possibly use
+     *  openmp task parallel to launch it asynchronously
+     */
+    for (size_t ii = 0; ii < pop_routes.size(); ii++)
+    {
+        pop_routes.at(ii) = results_host[ii*LOCAL_SIZE];
+    }
+
     // print out best route + length of it
     // could do on device for improved speed
     min_route = std::min_element(results_host,
@@ -163,25 +206,6 @@ float OCLLearn::getBestRoute
                                     (all_chrom_size / GLOBAL_SIZE),
                                 (all_chrom_size / GLOBAL_SIZE),
                                 &best_chromosome.at(0));
-
-        /*
-        int host_starts[NUM_SUBROUTES * 2];
-        queue.enqueueReadBuffer(buffers.at("starts"), CL_TRUE,
-                                load_from *
-                                NUM_SUBROUTES * 2 * sizeof(int)
-                                ,
-                                NUM_SUBROUTES * 2 * sizeof(int)
-                                ,
-                                host_starts);
-        unsigned int jj;
-        std::cout << std::endl;
-        std::cout << std::endl;
-        for (jj = 0; jj < NUM_SUBROUTES * 2; jj++)
-        {
-            std::cout << host_starts[jj] << " ";
-        }
-        std::cout << std::endl;
-        // */
     }
 
     avg = std::accumulate(results_host,
@@ -349,10 +373,11 @@ alg_result_t OCLLearn::run
         // TSP 
         /*
          *  The simple TSP thing does get much better results but its slow as
-         *  heck - only do it every so often so that it doesn't slow down the
-         *  whole program but does get better results
+         *  heck (takes up ~80% of runtime if done on every step) - only do it
+         *  every so often so that it doesn't slow down the whole program but
+         *  does get better results
          */
-        if (!(ii % 10))
+        if (!(ii % 50))
         {
             TSP_kernel.setArg(0, buffers.at("children"));
             ENQUEUE(TSP_kernel)
@@ -411,19 +436,13 @@ alg_result_t OCLLearn::run
 
         /********************/
 
-        /*
-         *  TODO - if a population goes stale for ~50-100 generations, generate
-         *  a new set of chromosomes, send to device, go again. Possibly use
-         *  openmp task parallel to launch it asynchronously
-         */
-
         // see if a better route has been created - every so often to stop spam
         if (!(ii % 10) || ii == GENERATIONS)
         {
             getBestRoute(new_best, best_chromosome);
         }
 
-        if (new_best < best_route)
+        if (new_best < best_route - 0.01)
         {
             best_route = new_best;
 
@@ -434,7 +453,7 @@ alg_result_t OCLLearn::run
                 std::cout << best_chromosome.at(jj) << " ";
             }
             fprintf(stdout,
-                    "\n%f at iteration %d after %.2lf secs\n",
+                    "\n%.2f at iteration %d after %.2lf secs\n",
                     best_route, ii, MPI_Wtime() - t_0);
             #endif
         }
@@ -453,6 +472,22 @@ alg_result_t OCLLearn::run
     std::cout << std::endl;
     std::cout << "took " << t_1-t_0 << " secs" << std::endl;
     #endif
+
+    // profiling info
+    if (PROFILER_ON)
+    {
+        double total_time = 0.0;
+
+        for (std::map<std::string, double>::iterator ii = kernel_times.begin();
+        ii != kernel_times.end(); ii++)
+        {
+            fprintf(stdout, "%1.2lf for %s\n",
+                    (*ii).second, (*ii).first.c_str());
+            total_time += (*ii).second;
+        }
+
+        fprintf(stdout, "%1.2lf total\n", total_time);
+    }
 
     return std::pair<float, route_vec_t>(best_route, best_chromosome);
 }
