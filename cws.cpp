@@ -313,7 +313,7 @@ void OCLLearn::genChromosomes
         // no nodes left to add
         if (!kk
         // right number of trucks being used the route
-        && cur_vehicles == NUM_SUBROUTES
+        && cur_vehicles <= NUM_SUBROUTES
         // haven't already generated it
         && all_routes.end() == std::find(all_routes.begin(),
                                          all_routes.end(),

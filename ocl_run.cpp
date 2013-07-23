@@ -255,9 +255,11 @@ alg_result_t OCLLearn::run
     try
     {
         // TSP
-        fitness_kernel.setArg(0, buffers.at("parents"));
-        queue.enqueueNDRangeKernel(fitness_kernel,
-            cl::NullRange, global, local);
+        frs_kernel.setArg(0, buffers.at("parents"));
+        queue.enqueueNDRangeKernel(frs_kernel,
+                                   cl::NullRange,
+                                   global,
+                                   local);
         queue.finish();
     }
     catch(cl::Error e)

@@ -27,10 +27,9 @@ import sys
 import math
 
 # keep same as in C++
-MAX_CAPACITY = 220 # FIXME read from file
+#MAX_CAPACITY = 220
 MIN_CAPACITY = 2
-NUM_SUBROUTES = 7;
-STOPS_PER_ROUTE = 16;
+STOPS_PER_ROUTE = 50;
 
 FILE_IN = '560.vrp'
 
@@ -42,11 +41,11 @@ def length(p1, p2, nodes):
 
 def graph_plot(route, nodes, demands):
 
-    best_len = 10000.0
+    best_len = 1000000000.0
     route_split = []
 
     for MC in xrange(0, 30):
-        for ST in xrange(4, STOPS_PER_ROUTE):
+        for ST in xrange(STOPS_PER_ROUTE-5, STOPS_PER_ROUTE):
             #  subroutes split up
             cur_route = []
             subroute = []
@@ -151,6 +150,14 @@ def parse(route):
             else:
                 dem_line = line.split()
                 nodes[float(dem_line[0])] = float(dem_line[1]),float(dem_line[2])
+
+    # find capacity
+    with open(FILE_IN) as fb:
+        for line in fb:
+            match = re.search("CAPACITY\s*:\s*([0-9]+)", line)
+            if match:
+                global MAX_CAPACITY
+                MAX_CAPACITY = int(match.group(1))
 
     found = []
     # check to find duplicates or missing ones

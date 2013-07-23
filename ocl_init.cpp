@@ -261,21 +261,10 @@ void OCLLearn::initOCL
     std::vector<cl_uint> dev_demands(1, 1000);
 
 #if 1
-    fprintf(stdout, "%lu size\n", info.node_coords.size());
-    const int f = 562;
-    fprintf(stdout, "%f\n", info.node_coords[f].s[0]);
-    fprintf(stdout, "%d\n", info.node_demands[f]);
-
     for (ii = 1; ii < info.node_coords.size()+1; ii++)
     {
-        fprintf(stdout, "%d  ", ii);
-        fflush(stdout);
         dev_coords.push_back(info.node_coords.at(ii));
-        fprintf(stdout, "%d  ", ii);
-        fflush(stdout);
         dev_demands.push_back(info.node_demands.at(ii));
-        fprintf(stdout, "%d  \n", ii);
-        fflush(stdout);
     }
 #else
     node_map_t::iterator kk;
