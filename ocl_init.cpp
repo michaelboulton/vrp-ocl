@@ -260,12 +260,36 @@ void OCLLearn::initOCL
     point_vec_t dev_coords(1);
     std::vector<cl_uint> dev_demands(1, 1000);
 
-    // FIXME hacky?
+#if 1
+    fprintf(stdout, "%lu size\n", info.node_coords.size());
+    const int f = 562;
+    fprintf(stdout, "%f\n", info.node_coords[f].s[0]);
+    fprintf(stdout, "%d\n", info.node_demands[f]);
+
     for (ii = 1; ii < info.node_coords.size()+1; ii++)
     {
+        fprintf(stdout, "%d  ", ii);
+        fflush(stdout);
         dev_coords.push_back(info.node_coords.at(ii));
+        fprintf(stdout, "%d  ", ii);
+        fflush(stdout);
         dev_demands.push_back(info.node_demands.at(ii));
+        fprintf(stdout, "%d  \n", ii);
+        fflush(stdout);
     }
+#else
+    node_map_t::iterator kk;
+    demand_vec_t::iterator ll;
+
+    for (
+    kk = info.node_coords.begin(),
+    ll = info.node_demands.begin();
+    kk != info.node_coords.end(); kk++, ll++)
+    {
+        dev_coords.push_back(kk->second);
+        dev_demands.push_back(ll->second);
+    }
+#endif
 
     // node coordinates
     cl_buf_t node_coord_buf(context,

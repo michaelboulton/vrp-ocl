@@ -109,7 +109,7 @@ private:
     cl::Program all_program;
 
     // info
-    RunInfo info;
+    const RunInfo info;
 
     //0, 1, 2, 3, 4, ...., 75
     route_vec_t all_stops;

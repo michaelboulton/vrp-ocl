@@ -27,10 +27,12 @@ import sys
 import math
 
 # keep same as in C++
-MAX_CAPACITY = 220
+MAX_CAPACITY = 220 # FIXME read from file
 MIN_CAPACITY = 2
 NUM_SUBROUTES = 7;
 STOPS_PER_ROUTE = 16;
+
+FILE_IN = '560.vrp'
 
 colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm']
 
@@ -125,7 +127,7 @@ def parse(route):
 
     demands = {}
     # load demands
-    with open('fruitybun-data.vrp') as fb:
+    with open(FILE_IN) as fb:
         #line = fb.readline()
         for line in fb:
             if "DEMAND" in line:
@@ -135,11 +137,11 @@ def parse(route):
                 break
             else:
                 dem_line = line.split()
-                demands[int(dem_line[0])] = int(dem_line[1])
+                demands[float(dem_line[0])] = float(dem_line[1])
 
     nodes = {}
     # load nodes
-    with open('fruitybun-data.vrp') as fb:
+    with open(FILE_IN) as fb:
         for line in fb:
             if "NODE" in line:
                 break
@@ -148,7 +150,7 @@ def parse(route):
                 break
             else:
                 dem_line = line.split()
-                nodes[int(dem_line[0])] = int(dem_line[1]),int(dem_line[2])
+                nodes[float(dem_line[0])] = float(dem_line[1]),float(dem_line[2])
 
     found = []
     # check to find duplicates or missing ones
@@ -172,6 +174,6 @@ if __name__ == '__main__':
             best_in += str(i)
             best_in += " "
 
-    best_in = [int(i) for i in best_in.split()]
+    best_in = [float(i) for i in best_in.split()]
     parse(best_in)
 

@@ -1,4 +1,4 @@
-CXXFLAGS=-O2 -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format
+CXXFLAGS=-Og -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format
 LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
