@@ -33,10 +33,10 @@ sort_e sort_strategy = NONELITIST;
 breed_e breed_strategy = PMX;
 
 int MUTRATE = 25;
-unsigned int NUM_SUBROUTES = 7;
+unsigned int NUM_SUBROUTES = 13;
 unsigned int STOPS_PER_ROUTE = 16;
 unsigned int MIN_CAPACITY = 0;
-unsigned int RAND_THRESHOLD = 90;
+unsigned int RAND_THRESHOLD = 95;
 unsigned int ARENA_SIZE = 4;
 int DEVICE_TYPE = CL_DEVICE_TYPE_CPU;
 size_t GLOBAL_SIZE = 2048;
@@ -366,12 +366,17 @@ void RunInfo::parseInput
     while (str_return == std::string::npos && file_stream.good());
 
     // Extract capacity
-    substr_pos = file_line.find(" : ");
-    sub = file_line.substr(substr_pos + 3);
+    substr_pos = file_line.find(":");
+    sub = file_line.substr(substr_pos + 2);
     capacity = std::atoi(sub.c_str());
 
-    // read "NODE_COORD_SECTION"
-    std::getline(file_stream, file_line);
+    // read until NODE_COORD_SECTION
+    do
+    {
+        std::getline(file_stream, file_line);
+        str_return = file_line.find("NODE_COORD_SECTION");
+    }
+    while (str_return == std::string::npos && file_stream.good());
 
     // read in node coordinates
     while (std::getline(file_stream, file_line), file_stream.good())

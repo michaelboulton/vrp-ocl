@@ -1,13 +1,8 @@
-CXXFLAGS=-Og -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format
+CXXFLAGS=-O3 -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format
 LDLIBS=-lgomp -lOpenCL -lmpi
 
 # factors affecting how it runs
-#TYPE=GPU
-#NUM_ITER=1000
-#GLOBAL_SIZE=512
-#GROUP_SIZE=64
 VERB=-DVERBOSE
-BLOCKING=-DBLOCK_CALLS
 
 #-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
  -DNUM_ITER=$(NUM_ITER) \
