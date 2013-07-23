@@ -66,10 +66,10 @@ inline uint MWC64X(__global uint2* const state)
 #if 1
 // function version makes whole thing run ~10% faster than macro version ???
 inline float euclideanDistance
-(const uint2 first,
- const uint2 second)
+(const float2 first,
+ const float2 second)
 {
-    return distance(convert_float2(first), convert_float2(second));
+    return distance(first, second);
 }
 #else
 #define euclideanDistance(first,second) \
@@ -83,7 +83,7 @@ inline float euclideanDistance
 float subrouteLength
 (                 uint*  const __restrict route,
             const int                     route_stops,
- __constant const uint2* const __restrict node_coords)
+ __constant const float2* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
@@ -196,7 +196,7 @@ __kernel void findRouteStarts
 __kernel void fitness
 (__global   const uint *        __restrict chromosomes,
  __global         float * const __restrict results,
- __constant const uint2 * const __restrict node_coords,
+ __constant const float2 * const __restrict node_coords,
  __global   const int *         __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
@@ -386,7 +386,7 @@ __kernel void breed
  __global       uint*          __restrict children,
  __global       uint*          __restrict route_lengths,
  __global       int *          __restrict route_starts,
- __constant     uint2*   const __restrict node_coords,
+ __constant     float2*   const __restrict node_coords,
  __constant     uint*    const __restrict node_demands,
  __global       uint2*   const __restrict state)
 {
@@ -703,12 +703,12 @@ __kernel void mutate
         uint ll, uu, range;
 
         // try to make it a certain size
-        while ((ll = MWC64X(&state[glob_id]) % NUM_NODES) > NUM_NODES / 2);
-        while ((range = MWC64X(&state[glob_id]) % (NUM_NODES - ll)) < NUM_NODES / 3);
+        //while ((ll = MWC64X(&state[glob_id]) % NUM_NODES) > NUM_NODES / 2);
+        //while ((range = MWC64X(&state[glob_id]) % (NUM_NODES - ll)) < NUM_NODES / 3);
 
         // original
-        //ll = MWC64X(&state[glob_id]) % NUM_NODES;
-        //range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
+        ll = MWC64X(&state[glob_id]) % NUM_NODES;
+        range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
 
         uu = ll + range;
 
@@ -788,7 +788,7 @@ __kernel void mutate
 __kernel void simpleTSP
 (__global         uint*        __restrict chromosomes,
  __global   const int*         __restrict route_starts,
- __constant const uint2* const __restrict node_coords,
+ __constant const float2* const __restrict node_coords,
  __constant const uint*  const __restrict node_demands)
 {
     uint glob_id = get_global_id(0);

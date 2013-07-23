@@ -34,9 +34,9 @@ breed_e breed_strategy = PMX;
 
 int MUTRATE = 25;
 unsigned int NUM_SUBROUTES = 7;
-unsigned int STOPS_PER_ROUTE = 12;
-unsigned int MIN_CAPACITY = 2;
-unsigned int RAND_THRESHOLD = 95;
+unsigned int STOPS_PER_ROUTE = 16;
+unsigned int MIN_CAPACITY = 0;
+unsigned int RAND_THRESHOLD = 90;
 unsigned int ARENA_SIZE = 4;
 int DEVICE_TYPE = CL_DEVICE_TYPE_CPU;
 size_t GLOBAL_SIZE = 2048;
@@ -345,7 +345,7 @@ void RunInfo::parseInput
     std::string sub;
     size_t str_return;
     size_t substr_pos;
-    int x, y;
+    float x, y;
     int depot, demand;
 
     std::ifstream file_stream(INPUT_FILE.c_str(), std::ifstream::in);
@@ -386,9 +386,9 @@ void RunInfo::parseInput
         stream >> sub;
         depot = atoi(sub.c_str());
         stream >> sub;
-        x = atoi(sub.c_str());
+        x = atof(sub.c_str());
         stream >> sub;
-        y = atoi(sub.c_str());
+        y = atof(sub.c_str());
         point_t coord = {{x, y}};
 
         node_coords[depot] = coord;

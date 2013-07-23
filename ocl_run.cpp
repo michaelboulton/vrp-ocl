@@ -336,7 +336,7 @@ alg_result_t OCLLearn::run
 
     /********************/
 
-    fprintf(stdout, "Now going for %zu iterations or %d seconds\n", GENERATIONS, int(MAX_TIME));
+    fprintf(stdout, "Now going for %lu iterations or %d seconds\n", GENERATIONS, int(MAX_TIME));
 
     for (ii = 1; ii < GENERATIONS + 1; ii++)
     {
@@ -453,7 +453,7 @@ alg_result_t OCLLearn::run
                 std::cout << best_chromosome.at(jj) << " ";
             }
             fprintf(stdout,
-                    "\n%.2f at iteration %d after %.2lf secs\n",
+                    "\n%.2f at iteration %d after %.2f secs\n",
                     best_route, ii, MPI_Wtime() - t_0);
             #endif
         }
@@ -481,12 +481,12 @@ alg_result_t OCLLearn::run
         for (std::map<std::string, double>::iterator ii = kernel_times.begin();
         ii != kernel_times.end(); ii++)
         {
-            fprintf(stdout, "%1.2lf for %s\n",
+            fprintf(stdout, "%1.2f for %s\n",
                     (*ii).second, (*ii).first.c_str());
             total_time += (*ii).second;
         }
 
-        fprintf(stdout, "%1.2lf total\n", total_time);
+        fprintf(stdout, "%1.2f total\n", total_time);
     }
 
     return std::pair<float, route_vec_t>(best_route, best_chromosome);

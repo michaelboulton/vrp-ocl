@@ -47,7 +47,7 @@ class OCLLearn;
 //    int first;
 //    int second;
 //} point_t;
-typedef cl_uint2 point_t;
+typedef cl_float2 point_t;
 
 // index of 2 points and the distance between them
 typedef struct point_info {
