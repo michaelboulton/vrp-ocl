@@ -31,6 +31,9 @@ link: $(FILES)
 	$(VERB) \
 	-c $<
 
+big: $(OUTFILE)
+	./$(OUTFILE) -s 50 -g 32 -f 560.vrp
+
 run: $(OUTFILE)
 	./$(OUTFILE)
 

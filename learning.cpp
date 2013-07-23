@@ -42,7 +42,7 @@ void printRoute
 {
     // track routes
     std::stringstream best_route;
-    float best_distance = 10000.0f;
+    float best_distance = 10000000000.0f;
 
     // auto find best solution in range
     uint max_cap, max_stops;
