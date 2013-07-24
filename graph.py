@@ -182,6 +182,10 @@ if __name__ == '__main__':
 
     #else:
 
+    if len(sys.argv) < 2:
+        print "arg 1 is file in - rest of args is a string of numbers corresponding to the best route"
+        exit(1)
+
     global FILE_IN
     FILE_IN = sys.argv[1]
 

@@ -22,6 +22,13 @@
 
 #include "common_header.hpp"
 
+/*
+ *  The chance of creating a route the same twice in a row is astronomically
+ *  low, so there might be no point in actually checking - saves doigna
+ *  std::find on all routes that gets slower the more there are
+ */
+#define ROUTE_FIND_CHECK
+
 // returns number of nodes not yet in the total route
 int OCLLearn::nodesLeft
 (route_vec_t const& total_route,
@@ -206,7 +213,8 @@ void OCLLearn::genChromosomes
                 if (CWS_pair_list.at(ii).first_index == pair_first
                 && total_route.end() == std::find(total_route.begin(),
                                                   total_route.end(),
-                                                  CWS_pair_list.at(ii).second_index))
+                                                  CWS_pair_list.at(ii).second_index)
+                )
                 {
                     if (random() % 100 < rand_chance)
                     {
@@ -220,7 +228,8 @@ void OCLLearn::genChromosomes
                 else if (CWS_pair_list.at(ii).second_index == pair_first
                 && total_route.end() == std::find(total_route.begin(),
                                                   total_route.end(),
-                                                  CWS_pair_list.at(ii).first_index))
+                                                  CWS_pair_list.at(ii).first_index)
+                )
                 {
                     if (random() % 100 < rand_chance)
                     {
@@ -239,6 +248,8 @@ void OCLLearn::genChromosomes
             // if there's only 1 node left
             if (pair_second > node_coords.size())
             {
+                //fprintf(stdout, "%d\n", pair_second);
+                //fprintf(stdout, "%lu\n", node_coords.size());
                 break;
             }
             subroute.push_back(pair_second);
@@ -305,19 +316,22 @@ void OCLLearn::genChromosomes
             //kk = nodesLeft(total_route, remaining);
             kk = node_coords.size() - total_route.size() - 1;
 
-            cur_vehicles++;
+            //cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles <= NUM_SUBROUTES);
+        while (kk && ++cur_vehicles <= NUM_SUBROUTES);
 
         // no nodes left to add
         if (!kk
         // right number of trucks being used the route
         && cur_vehicles <= NUM_SUBROUTES
+        #ifdef ROUTE_FIND_CHECK
         // haven't already generated it
         && all_routes.end() == std::find(all_routes.begin(),
                                          all_routes.end(),
-                                         total_route))
+                                         total_route)
+        #endif
+        )
         {
             all_routes.push_back(total_route);
             #ifdef VERBOSE
