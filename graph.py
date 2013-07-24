@@ -31,7 +31,7 @@ import math
 MIN_CAPACITY = 2
 STOPS_PER_ROUTE = 50;
 
-FILE_IN = '560.vrp'
+FILE_IN = '1200.vrp'
 
 colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm']
 
@@ -57,7 +57,12 @@ def graph_plot(route, nodes, demands):
             stop_count = 0
 
             for i in route:
-                cargo_left -= demands[i]
+                try:
+                    cargo_left -= demands[i]
+                except Exception as e:
+                    print e
+                    print demands
+                    raise e
                 stop_count += 1
 
                 if cargo_left <= MC or stop_count >= ST:
@@ -136,7 +141,7 @@ def parse(route):
                 break
             else:
                 dem_line = line.split()
-                demands[float(dem_line[0])] = float(dem_line[1])
+                demands[int(dem_line[0])] = float(dem_line[1])
 
     nodes = {}
     # load nodes
@@ -149,7 +154,7 @@ def parse(route):
                 break
             else:
                 dem_line = line.split()
-                nodes[float(dem_line[0])] = float(dem_line[1]),float(dem_line[2])
+                nodes[int(dem_line[0])] = float(dem_line[1]),float(dem_line[2])
 
     # find capacity
     with open(FILE_IN) as fb:
@@ -181,6 +186,6 @@ if __name__ == '__main__':
             best_in += str(i)
             best_in += " "
 
-    best_in = [float(i) for i in best_in.split()]
+    best_in = [int(i) for i in best_in.split()]
     parse(best_in)
 
