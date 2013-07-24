@@ -31,7 +31,7 @@ import math
 MIN_CAPACITY = 2
 STOPS_PER_ROUTE = 50;
 
-FILE_IN = '560.vrp'
+#FILE_IN = 'P-n101-k4.vrp'
 
 colours = ['r', 'g', 'b', 'y', 'k', 'c', 'm']
 
@@ -172,14 +172,18 @@ def parse(route):
     graph_plot(route, nodes, demands)
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        best_in = "53 28 14 55 20 36 9 47 35 68 5 52 4 45 33 10 40 73 59 13 41 18 46 30 58 16 6 48 62 29 23 63 3 34 64 24 57 42 65 43 44 2 74 76 31 49 38 21 71 61 72 37 70 22 75 27 8 54 15 60 12 67 66 39 11 32 56 26 51 19 25 50 17 7 69 "
+    #if len(sys.argv) == 1:
+    #    best_in = "53 28 14 55 20 36 9 47 35 68 5 52 4 45 33 10 40 73 59 13 41 18 46 30 58 16 6 48 62 29 23 63 3 34 64 24 57 42 65 43 44 2 74 76 31 49 38 21 71 61 72 37 70 22 75 27 8 54 15 60 12 67 66 39 11 32 56 26 51 19 25 50 17 7 69 "
 
-    else:
-        best_in = ""
-        for i in sys.argv[1:]:
-            best_in += str(i)
-            best_in += " "
+    #else:
+
+    global FILE_IN
+    FILE_IN = sys.argv[1]
+
+    best_in = ""
+    for i in sys.argv[2:]:
+        best_in += str(i)
+        best_in += " "
 
     best_in = [float(i) for i in best_in.split()]
     parse(best_in)

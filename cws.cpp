@@ -308,7 +308,7 @@ void OCLLearn::genChromosomes
             cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles < NUM_SUBROUTES);
+        while (kk && cur_vehicles <= NUM_SUBROUTES);
 
         // no nodes left to add
         if (!kk
