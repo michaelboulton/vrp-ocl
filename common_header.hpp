@@ -94,8 +94,8 @@ public:
     void parseInput (void);
 };
 
-class OCLLearn{
-
+class OCLLearn
+{
     typedef cl::Buffer cl_buf_t;
     typedef cl::Kernel cl_knl_t;
 
@@ -144,11 +144,6 @@ private:
     void genChromosomes
     (std::vector<route_vec_t>&);
 
-    void addNode
-    (route_vec_t& route,
-    unsigned int& current_capacity,
-    unsigned int pair_first, unsigned int pair_second);
-
     int nodesLeft
     (route_vec_t const& total_route,
     route_vec_t & remaining);
@@ -176,6 +171,13 @@ private:
     // for seeing which populations have gone stale
     std::vector<float> pop_routes;
 
+protected:
+
+    void addNode
+    (route_vec_t& route,
+    unsigned int& current_capacity,
+    unsigned int pair_first, unsigned int pair_second) const;
+
 public:
 
     alg_result_t run
@@ -184,35 +186,28 @@ public:
     OCLLearn
     (const RunInfo& run_info);
 
+    void init
+    (void);
+
 };
 
-#if 0
+#if defined(CVRP_USE_TBB)
 #include "tbb/task_scheduler_init.h"
 #include "tbb/blocked_range.h"
 #include "tbb/parallel_do.h"
 #include "tbb/concurrent_vector.h"
 #endif
 
-class TBBRouteMaker
+class TBBRouteMaker : protected OCLLearn
 {
 private:
-    const point_info_vec_t& CWS_pair_list;
-    const node_map_t& node_coords;
-    const demand_vec_t& node_demands;
-
-    //const RunInfo info;
-    //const route_vec_t all_stops;
+    const RunInfo info;
+    const route_vec_t all_stops;
 
 public:
     TBBRouteMaker
-    (const point_info_vec_t& CWS_pair_list,
-     const node_map_t& node_coords,
-     const demand_vec_t& node_demands);
-
-    void addNode
-    (route_vec_t& route, route_vec_t& total_route,
-    unsigned int& current_capacity,
-    unsigned int pair_first, unsigned int pair_second) const;
+    (const RunInfo info,
+     const route_vec_t all_stops);
 
     void operator()
     (route_vec_t& route) const;

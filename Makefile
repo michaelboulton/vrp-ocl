@@ -1,5 +1,9 @@
-CXXFLAGS=-O3 -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format
-LDLIBS=-lgomp -lOpenCL -lmpi
+# TODO do some way to check if this exists
+TBB_INC_FLAG=
+TBB_LIB_FLAG=
+
+CXXFLAGS=-O3 -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format $(TBB_INC_FLAG)
+LDLIBS=-lgomp -lOpenCL -lmpi $(TBB_LIB_FLAG)
 
 # factors affecting how it runs
 VERB=-DVERBOSE
@@ -21,6 +25,10 @@ OUTFILE=vrp-ocl
 
 # make gpu by default
 $(OUTFILE): Makefile link
+
+tbb:
+	@echo Making with TBB support
+	@$(MAKE) TBB_INC_FLAG=-DCVRP_USE_TBB TBB_LIB_FLAG=-ltbb
 
 link: $(FILES)
 	$(CXX) $(CXXFLAGS) -o $(OUTFILE) $(FILES) $(LDFLAGS) $(LDLIBS)

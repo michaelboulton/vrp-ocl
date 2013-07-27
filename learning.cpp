@@ -129,6 +129,7 @@ int main
     r.genSortedCWS();
 
     OCLLearn ocl_learner(r);
+    ocl_learner.init();
 
     alg_result_t result;
 

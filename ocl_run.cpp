@@ -226,16 +226,30 @@ alg_result_t OCLLearn::run
 
     t_0 = MPI_Wtime();
 
-    // all valid routes created
-    std::vector<route_vec_t> all_routes;
-
     // generate a load of random routes
-    genChromosomes(all_routes);
+#if defined(CVRP_USE_TBB)
+    fprintf(stdout, "Generating %zu random routes...", GLOBAL_SIZE);
+    fflush(stdout);
 
-    std::random_shuffle(all_routes.begin(), all_routes.end());
-    #ifdef VERBOSE
-    std::cout << " done" << std::endl;
-    #endif
+    // all valid routes created
+    std::vector<route_vec_t> all_routes(GLOBAL_SIZE);
+
+    tbb::task_scheduler_init init(4);
+
+    TBBRouteMaker m = TBBRouteMaker(info, all_stops);
+    tbb::parallel_do(all_routes.begin(), all_routes.end(), m);
+    fprintf(stdout, "\rGenerating routes...done.\n");
+#else
+    // all valid routes created
+    std::vector<route_vec_t> all_routes(0);
+
+    genChromosomes(all_routes);
+#endif
+
+    if (VERBOSE)
+    {
+        fprintf(stdout, "\nTook %lf seconds\n", MPI_Wtime() - t_0);
+    }
 
     // need to write each one to the buffer sequentially
     for(ii=0; ii<all_routes.size(); ii++)

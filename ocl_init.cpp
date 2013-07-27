@@ -486,11 +486,17 @@ OCLLearn::OCLLearn
 (RunInfo const& run_info)
 :info(run_info)
 {
+    ;
+}
+
+void OCLLearn::init
+(void)
+{
     srand(time(NULL));
 
     // size in bytes of entire population is
-    std::cout << run_info.node_coords.size() << std::endl;
-    all_chrom_size = (run_info.node_coords.size() - 1)
+    std::cout << info.node_coords.size() << std::endl;
+    all_chrom_size = (info.node_coords.size() - 1)
                      * GLOBAL_SIZE * sizeof(cl_uint);
 
     initOCL();
@@ -498,11 +504,11 @@ OCLLearn::OCLLearn
     // one element per population
     pop_routes = std::vector<float>(GLOBAL_SIZE/LOCAL_SIZE);
 
-    all_stops = route_vec_t(run_info.node_coords.size(), 0);
+    all_stops = route_vec_t(info.node_coords.size(), 0);
 
     // initialise 'best route' to be 0, 1, 2, 3, 4, ...
     unsigned int ii;
-    for (ii = 0; ii < run_info.node_coords.size(); ii++)
+    for (ii = 0; ii < info.node_coords.size(); ii++)
     {
         all_stops.at(ii) = ii + 2;
     }

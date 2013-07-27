@@ -88,7 +88,7 @@ void OCLLearn::addNode
 (route_vec_t& subroute,
  unsigned int& current_capacity,
  unsigned int pair_first,
- unsigned int pair_second)
+ unsigned int pair_second) const
 {
     // make a reference so I don't need .info in front of it
     const demand_vec_t& node_demands = info.node_demands;
@@ -339,6 +339,7 @@ void OCLLearn::genChromosomes
             #endif
         }
     }
+    std::cout << std::endl;
 }
 
 // function for sorting points

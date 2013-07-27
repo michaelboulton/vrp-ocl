@@ -22,27 +22,24 @@
 
 #include "common_header.hpp"
 
-#if 0
+#if defined(CVRP_USE_TBB)
 void TBBRouteMaker::operator()
-(route_vec_t& route) const
-//(const tbb::blocked_range<size_t>& r) const
+(route_vec_t& total_route) const
 {
-    unsigned int ii, jj, kk;
+    // refs
+    const point_info_vec_t& CWS_pair_list = info.CWS_pair_list;
+    const node_map_t& node_coords = info.node_coords;
+    const demand_vec_t& node_demands = info.node_demands;
 
-    // random numbers that decide whether to use a connection or not
-    unsigned int loop_rand = 0;
-
-    #ifdef VERBOSE
-    std::cout << std::endl;
-    std::cout << "Generating " << GLOBAL_SIZE << " random routes ... 0" << std::flush;
-    #endif
-
-    // TODO this while loop is the bit that needs to be task parallelised
-    // while we still dont have enough chromosomes
     while (1)
     {
+        unsigned int ii, jj, kk;
+
+        // random numbers that decide whether to use a connection or not
+        unsigned int loop_rand = 0;
+
         // initialise route to take
-        route_vec_t total_route;
+        total_route = route_vec_t(0);
         route_vec_t remaining = all_stops;
         unsigned int cur_vehicles = 0;
 
@@ -74,7 +71,6 @@ void TBBRouteMaker::operator()
             // and isn't the depot
             || pair_first == info.depot_node);
 
-            // FIXME TODO XXX just choose the pair, dont look for another second item (??? why did i do this)
             // go through all pairs, randomly choose one from near the top
             for (ii = 0; ii < CWS_pair_list.size(); ii++)
             {
@@ -82,7 +78,8 @@ void TBBRouteMaker::operator()
                 if (CWS_pair_list.at(ii).first_index == pair_first
                 && total_route.end() == std::find(total_route.begin(),
                                                   total_route.end(),
-                                                  CWS_pair_list.at(ii).second_index))
+                                                  CWS_pair_list.at(ii).second_index)
+                )
                 {
                     if (random() % 100 < rand_chance)
                     {
@@ -96,7 +93,8 @@ void TBBRouteMaker::operator()
                 else if (CWS_pair_list.at(ii).second_index == pair_first
                 && total_route.end() == std::find(total_route.begin(),
                                                   total_route.end(),
-                                                  CWS_pair_list.at(ii).first_index))
+                                                  CWS_pair_list.at(ii).first_index)
+                )
                 {
                     if (random() % 100 < rand_chance)
                     {
@@ -115,6 +113,8 @@ void TBBRouteMaker::operator()
             // if there's only 1 node left
             if (pair_second > node_coords.size())
             {
+                //fprintf(stdout, "%d\n", pair_second);
+                //fprintf(stdout, "%lu\n", node_coords.size());
                 break;
             }
             subroute.push_back(pair_second);
@@ -155,7 +155,6 @@ void TBBRouteMaker::operator()
                 )
                 {
                     addNode(subroute,
-                            total_route,
                             current_capacity,
                             pair_first,
                             pair_second);
@@ -182,24 +181,18 @@ void TBBRouteMaker::operator()
             //kk = nodesLeft(total_route, remaining);
             kk = node_coords.size() - total_route.size() - 1;
 
-            cur_vehicles++;
+            //cur_vehicles++;
         }
         // end when there are no nodes left to add or the route has gone over provision
-        while (kk && cur_vehicles <= NUM_TRUCKS);
+        while (kk && ++cur_vehicles <= NUM_SUBROUTES);
 
         // no nodes left to add
         if (!kk
         // right number of trucks being used the route
-        && cur_vehicles == NUM_TRUCKS
-        // haven't already generated it
-        && all_routes.end() == std::find(all_routes.begin(),
-                                         all_routes.end(),
-                                         total_route))
+        && cur_vehicles <= NUM_SUBROUTES
+        // don't check to see if it exists - assume it doesn't
+        )
         {
-            all_routes.push_back(total_route);
-            #ifdef VERBOSE
-            std::cout << "\rGenerating " << GLOBAL_SIZE << " random routes ... " << all_routes.size() <<std::flush;
-            #endif
             break;
         }
     }
@@ -207,12 +200,11 @@ void TBBRouteMaker::operator()
 #endif
 
 TBBRouteMaker::TBBRouteMaker
-(const point_info_vec_t& CWS_pair_list_in,
- const node_map_t& node_coords_in,
- const demand_vec_t& node_demands_in)
-:CWS_pair_list(CWS_pair_list_in),
- node_coords(node_coords_in),
- node_demands(node_demands_in)
+(const RunInfo info_in,
+ const route_vec_t all_stops_in)
+:OCLLearn(info_in),
+ info(info_in),
+ all_stops(all_stops_in)
 {
     ;
 }
