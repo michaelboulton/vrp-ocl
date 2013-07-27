@@ -772,6 +772,10 @@ __kernel void mutate
             SWAP(chromosome[ii], chromosome[jj]);
         }
 
+#elif defined(MUT_ROTATE)
+
+        // TODO
+
 #endif
 
     }
