@@ -30,4 +30,5 @@ There are other parameters but these ones make the most difference
 * Add rotation mutation
 * Add edge recombination crossover
 * Optimisation
+* Finish TBB generating routes - generating routes takes a long time for hard problems, will be quicker in parallel
 
