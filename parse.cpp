@@ -43,7 +43,7 @@ size_t GLOBAL_SIZE = 2048;
 size_t LOCAL_SIZE = 32;
 
 // other params
-std::string INPUT_FILE("fruitybun-data.vrp");
+std::string INPUT_FILE("problems/fruitybun-data.vrp");
 int VERBOSE_OUTPUT = 0;
 
 // say max 10 minutes or 200k generations default - about the same time on my computer

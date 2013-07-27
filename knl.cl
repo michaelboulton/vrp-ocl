@@ -701,13 +701,13 @@ __kernel void mutate
         // reverse a random section of the chromosome
         uint ll, uu, range;
 
-        // try to make it a certain size
-        //while ((ll = MWC64X(&state[glob_id]) % NUM_NODES) > NUM_NODES / 2);
-        //while ((range = MWC64X(&state[glob_id]) % (NUM_NODES - ll)) < NUM_NODES / 3);
-
         // original
         ll = MWC64X(&state[glob_id]) % NUM_NODES;
         range = MWC64X(&state[glob_id]) % (NUM_NODES - ll);
+
+        // make a certain size
+        //while ((ll = MWC64X(&state[glob_id]) % NUM_NODES) > NUM_NODES / 2);
+        //while ((range = MWC64X(&state[glob_id]) % (NUM_NODES - ll)) < NUM_NODES / 3);
 
         uu = ll + range;
 
