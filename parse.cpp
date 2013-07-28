@@ -39,7 +39,7 @@ unsigned int MIN_CAPACITY = 0;
 unsigned int RAND_THRESHOLD = 95;
 unsigned int ARENA_SIZE = 4;
 int DEVICE_TYPE = CL_DEVICE_TYPE_CPU;
-size_t GLOBAL_SIZE = 2048;
+size_t GLOBAL_SIZE = 512;
 size_t LOCAL_SIZE = 32;
 
 // other params
@@ -50,7 +50,7 @@ int VERBOSE_OUTPUT = 0;
 size_t GENERATIONS = 200000;
 double MAX_TIME = 600;
 
-bool PROFILER_ON = false;
+bool PROFILER_ON = true;
 
 void parseArgs
 (int argc, char* argv[])

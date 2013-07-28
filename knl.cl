@@ -80,8 +80,8 @@ inline float euclideanDistance
  *  Returns how long a subroute is - used in TSP
  */
 float subrouteLength
-(                 uint*  const __restrict route,
-            const int                     route_stops,
+(__global         uint*   const __restrict route,
+            const int                      route_stops,
  __constant const float2* const __restrict node_coords)
 {
     uint ii;
@@ -385,7 +385,7 @@ __kernel void breed
  __global       uint*          __restrict children,
  __global       uint*          __restrict route_lengths,
  __global       int *          __restrict route_starts,
- __constant     float2*   const __restrict node_coords,
+ __constant     float2*  const __restrict node_coords,
  __constant     uint*    const __restrict node_demands,
  __global       uint2*   const __restrict state)
 {
@@ -685,12 +685,16 @@ __kernel void mutate
 
     chromosomes += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
 
+    #if 0
     // copy in all threads for better mem access, even if some won't use it
     uint chromosome[NUM_NODES];
     for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosome[ii] = chromosomes[ii];
     }
+    #else
+    __global uint* chromosome = chromosomes;
+    #endif
 
     // mutate with MUT_RATE% chance
     if((MWC64X(&state[glob_id]) % 100) < MUT_RATE)
@@ -780,10 +784,12 @@ __kernel void mutate
 
     }
 
+    #if 0
     for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosomes[ii] = chromosome[ii];
     }
+    #endif
 }
 
 /************************/
@@ -805,12 +811,16 @@ __kernel void simpleTSP
     chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
     route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
 
+    #if 0
     // copy chromosome into private memory
     uint chromosome[NUM_NODES];
     for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosome[ii] = chromosomes[ii];
     }
+    #else
+    __global uint* chromosome = chromosomes;
+    #endif
 
     // swap two values
     uint tmp_val;
@@ -821,15 +831,16 @@ __kernel void simpleTSP
     float cur_subroute_length;
 
     uint num_routes = route_starts[0];
+
     // for each mini route
-    for(ii = 1; ii < num_routes; ii++)
+    for (ii = 1; ii < num_routes; ii++)
     {
         // beginning and end of current route, including depot stops
         uint route_begin = route_starts[ii];
         uint route_end = route_starts[ii + 1];
 
         // current route to look at
-        uint* const current_subroute = chromosome + route_begin;
+        __global uint* const current_subroute = chromosome + route_begin;
 
         // length of current route
         uint route_length = route_end - route_begin;
@@ -840,12 +851,12 @@ __kernel void simpleTSP
                                               node_coords);
 
         // for each item in the current sub route pointed to by current_subroute
-        for(jj = 1; jj < route_length; jj++)
+        for (jj = 1; jj < route_length; jj++)
         {
             // for each pair of routes in total route
-            for(kk = jj + 1; kk < route_length; kk++)
+            for (kk = jj + 1; kk < route_length; kk++)
             {
-                if(jj != kk
+                if (jj != kk
                 && current_subroute[jj] != 0
                 && current_subroute[kk] != 0)
                 {
@@ -855,7 +866,7 @@ __kernel void simpleTSP
                                                          route_length,
                                                          node_coords);
 
-                    if(cur_subroute_length < best_subroute_length)
+                    if (cur_subroute_length < best_subroute_length)
                     {
                         best_subroute_length = cur_subroute_length;
                     }
@@ -869,11 +880,13 @@ __kernel void simpleTSP
         }
     }
 
+    #if 0
     // copy chromosome back
     for(ii = 0; ii < NUM_NODES; ii++)
     {
         chromosomes[ii] = chromosome[ii];
     }
+    #endif
 }
 
 /************************/

@@ -497,12 +497,17 @@ alg_result_t OCLLearn::run
         for (std::map<std::string, double>::iterator ii = kernel_times.begin();
         ii != kernel_times.end(); ii++)
         {
-            fprintf(stdout, "%1.2f for %s\n",
-                    (*ii).second, (*ii).first.c_str());
-            total_time += (*ii).second;
+            total_time += ii->second;
         }
 
-        fprintf(stdout, "%1.2f total\n", total_time);
+        for (std::map<std::string, double>::iterator ii = kernel_times.begin();
+        ii != kernel_times.end(); ii++)
+        {
+            fprintf(stdout, "%1.2f%% (%1.2f ms) for %s\n",
+                    ii->second/total_time*100, ii->second, ii->first.c_str());
+        }
+
+        fprintf(stdout, "%1.2f ms total\n", total_time);
     }
 
     return std::pair<float, route_vec_t>(best_route, best_chromosome);
