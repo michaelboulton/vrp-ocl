@@ -48,7 +48,7 @@ int VERBOSE_OUTPUT = 0;
 
 // say max 10 minutes or 200k generations default - about the same time on my computer
 size_t GENERATIONS = 200000;
-double MAX_TIME = 360;
+double MAX_TIME = 600;
 
 bool PROFILER_ON = false;
 

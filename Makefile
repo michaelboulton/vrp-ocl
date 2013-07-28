@@ -2,16 +2,11 @@
 TBB_INC_FLAG=
 TBB_LIB_FLAG=
 
-CXXFLAGS=-O3 -g -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format $(TBB_INC_FLAG)
+CXXFLAGS=-O3 -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format $(TBB_INC_FLAG)
 LDLIBS=-lgomp -lOpenCL -lmpi $(TBB_LIB_FLAG)
 
 # factors affecting how it runs
 VERB=-DVERBOSE
-
-#-DOCL_TYPE=CL_DEVICE_TYPE_$(TYPE) \
- -DNUM_ITER=$(NUM_ITER) \
- -DGLOBAL_SIZE=$(GLOBAL_SIZE) \
- -DGROUP_SIZE=$(GROUP_SIZE) \
 
 FILES=\
 	ocl_init.o \
@@ -23,7 +18,6 @@ FILES=\
 
 OUTFILE=vrp-ocl
 
-# make gpu by default
 $(OUTFILE): Makefile link
 
 tbb:
@@ -39,19 +33,9 @@ link: $(FILES)
 	$(VERB) \
 	-c $<
 
-big: $(OUTFILE)
-	./$(OUTFILE) -s 50 -g 32 -f 560.vrp
-
 run: $(OUTFILE)
 	./$(OUTFILE)
 
 clean:
 	rm -f *.o *.mod *genmod* *.s $(OUTFILE)
-
-# include opencl library and kernels in this?
-executable: 
-	rm -f $(EXEC_OUT)
-	echo "g++ -o $(EXTRACT_DIR)/$(PROJNAME)_carma.exe *.o \$$LDLIBS -lcudart -lgfortran -lgomp" > $(OBJDIR)/link.sh
-	chmod +x $(OBJDIR)/link.sh
-	makeself $(OBJDIR) $(EXEC_OUT) "unlinked $(PROJNAME)" ./link.sh --nox11
 

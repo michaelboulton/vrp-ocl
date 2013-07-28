@@ -177,23 +177,19 @@ def parse(route):
     graph_plot(route, nodes, demands)
 
 if __name__ == '__main__':
-    #if len(sys.argv) == 1:
-    #    best_in = "53 28 14 55 20 36 9 47 35 68 5 52 4 45 33 10 40 73 59 13 41 18 46 30 58 16 6 48 62 29 23 63 3 34 64 24 57 42 65 43 44 2 74 76 31 49 38 21 71 61 72 37 70 22 75 27 8 54 15 60 12 67 66 39 11 32 56 26 51 19 25 50 17 7 69 "
 
-    #else:
+    global FILE_IN
 
     if len(sys.argv) < 2:
         print "arg 1 is file in - rest of args is a string of numbers corresponding to the best route"
-        exit(1)
+        print "showing for 'fruitybun' problem"
 
-    global FILE_IN
-    FILE_IN = sys.argv[1]
+        FILE_IN = "problems/fruitybun-data.vrp"
+        best_in = "69 3 75 22 70 72 61 71 21 38 37 48 49 31 5 46 30 6 16 58 55 14 28 53 47 35 52 17 64 24 57 50 25 19 51 33 45 4 18 7 34 74 2 44 42 43 65 23 62 29 63 41 40 10 26 56 32 11 39 59 73 13 8 36 54 12 66 67 60 15 20 9 68 27 76".split()
+    else:
+        FILE_IN = sys.argv[1]
+        best_in = sys.argv[2:]
 
-    best_in = ""
-    for i in sys.argv[2:]:
-        best_in += str(i)
-        best_in += " "
-
-    best_in = [int(i) for i in best_in.split()]
+    best_in = [int(i) for i in best_in]
     parse(best_in)
 
