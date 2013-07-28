@@ -248,7 +248,7 @@ alg_result_t OCLLearn::run
 
     if (VERBOSE)
     {
-        fprintf(stdout, "\nTook %lf seconds\n", MPI_Wtime() - t_0);
+        fprintf(stdout, "\nTook %f seconds\n", MPI_Wtime() - t_0);
     }
 
     // need to write each one to the buffer sequentially

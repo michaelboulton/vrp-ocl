@@ -25,12 +25,13 @@
 #define MUT_RATE 25
 #define MUT_SWAP
 #define NUM_SUBROUTES 7
-#define NUM_COORDS 75
+#define MIN_CAPACITY 0
+#define NUM_NODES 75
 #define MAX_CAPACITY 220
 #define LOCAL_SIZE 256
 #define GLOBAL_SIZE 256
 #define MAX_PER_ROUTE 12
-#define K_OPT 2
+#define DEPOT_NODE 0
 #endif
 
 // for sorting kernels
