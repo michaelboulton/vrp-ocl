@@ -81,14 +81,14 @@ inline float euclideanDistance
  *  Returns how long a subroute is - used in TSP
  */
 float subrouteLength
-(__global         uint*   const __restrict route,
+(__global   const uint*   const __restrict route,
             const int                      route_stops,
  __constant const float2* const __restrict node_coords)
 {
     uint ii;
     float route_length = 0.0f;
 
-    for(ii = 0; ii < route_stops; ii++)
+    for (ii = 0; ii < route_stops; ii++)
     {
         route_length += euclideanDistance(node_coords[route[ii]],
                                           node_coords[route[ii + 1]]);
@@ -194,10 +194,10 @@ __kernel void findRouteStarts
 
 // TODO - take in min capacity and stops per route as parameter
 __kernel void fitness
-(__global   const uint *        __restrict chromosomes,
- __global         float * const __restrict results,
+(__global   const uint *         __restrict chromosomes,
+ __global         float *  const __restrict results,
  __constant const float2 * const __restrict node_coords,
- __global   const int *         __restrict route_starts)
+ __global   const int *          __restrict route_starts)
 {
     const uint glob_id = get_global_id(0);
     const uint loc_id = get_local_id(0);
@@ -296,7 +296,7 @@ __kernel void ParallelBitonic_NonElitist
     output += LOCAL_SIZE*group_id*NUM_NODES + loc_id*NUM_NODES;
 
     __global const uint* input = aux[loc_id].idx;
-    for(kk = 0; kk < NUM_NODES; kk++)
+    for (kk = 0; kk < NUM_NODES; kk++)
     {
         output[kk] = input[kk];
     }
@@ -327,7 +327,7 @@ __kernel void ParallelBitonic_Elitist
     int loc_div = loc_id / 2;
 
     // if an even item in the work group
-    if(loc_id > LOCAL_SIZE)
+    if (loc_id > LOCAL_SIZE)
     {
         // then use this to access children
         loc_div = loc_id / 2;
@@ -369,10 +369,10 @@ __kernel void ParallelBitonic_Elitist
     }
 
     // copy back only the first half
-    if(loc_id < LOCAL_SIZE)
+    if (loc_id < LOCAL_SIZE)
     {
         __global const uint* input = aux[loc_id].idx;
-        for(ii = 0; ii < NUM_NODES; ii++)
+        for (ii = 0; ii < NUM_NODES; ii++)
         {
             output[ii] = input[ii];
         }
@@ -558,7 +558,7 @@ __kernel void breed
     // to see which elements in child have not yet been written
     int copied[NUM_NODES];
     // reset
-    for(jj = 0; jj < NUM_NODES; jj++)
+    for (jj = 0; jj < NUM_NODES; jj++)
     {
         copied[jj] = 0;
     }
@@ -665,7 +665,7 @@ __kernel void breed
     children += LOCAL_SIZE * NUM_NODES * group_id + loc_id * NUM_NODES;
 
     // copy into children
-    for(ii = 0; ii < NUM_NODES; ii++)
+    for (ii = 0; ii < NUM_NODES; ii++)
     {
         children[ii] = child[ii];
     }
@@ -716,7 +716,7 @@ __kernel void mutate
 
         uu = ll + range;
 
-        for(; ll < uu; ll++, uu--)
+        for (; ll < uu; ll++, uu--)
         {
             SWAP(chromosome[ll], chromosome[uu]);
         }
@@ -758,7 +758,7 @@ __kernel void mutate
         ll2 += uu1;
 
         // swap range
-        for(ii = 0; ii < range; ii++)
+        for (ii = 0; ii < range; ii++)
         {
             SWAP(chromosome[ll1+ii], chromosome[ll2+ii]);
         }
@@ -820,7 +820,7 @@ __kernel void simpleTSP
         chromosome[ii] = chromosomes[ii];
     }
     #else
-    __global uint* chromosome = chromosomes;
+    __global uint * const chromosome = chromosomes;
     #endif
 
     // swap two values
@@ -834,14 +834,14 @@ __kernel void simpleTSP
     uint num_routes = route_starts[0];
 
     // for each mini route
-    for (ii = 1; ii < num_routes; ii++)
+    for (ii = 1; ii < num_routes + 1; ii++)
     {
         // beginning and end of current route, including depot stops
         uint route_begin = route_starts[ii];
         uint route_end = route_starts[ii + 1];
 
         // current route to look at
-        __global uint* const current_subroute = chromosome + route_begin;
+        __global uint * const current_subroute = chromosome + route_begin;
 
         // length of current route
         uint route_length = route_end - route_begin;
@@ -852,14 +852,12 @@ __kernel void simpleTSP
                                               node_coords);
 
         // for each item in the current sub route pointed to by current_subroute
-        for (jj = 1; jj < route_length; jj++)
+        for (jj = 0; jj < route_length; jj++)
         {
             // for each pair of routes in total route
             for (kk = jj + 1; kk < route_length; kk++)
             {
-                if (jj != kk
-                && current_subroute[jj] != 0
-                && current_subroute[kk] != 0)
+                if (jj != kk)
                 {
                     // swap and see if its good
                     SWAP(current_subroute[jj], current_subroute[kk]);

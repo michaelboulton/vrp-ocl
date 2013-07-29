@@ -39,7 +39,7 @@ unsigned int MIN_CAPACITY = 0;
 unsigned int RAND_THRESHOLD = 95;
 unsigned int ARENA_SIZE = 4;
 int DEVICE_TYPE = CL_DEVICE_TYPE_CPU;
-size_t GLOBAL_SIZE = 512;
+size_t GLOBAL_SIZE = 768;
 size_t LOCAL_SIZE = 32;
 
 // other params

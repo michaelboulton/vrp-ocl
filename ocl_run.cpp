@@ -342,7 +342,7 @@ alg_result_t OCLLearn::run
                                 buffers.at("parents"),
                                 0, 0, all_chrom_size);
     }
-    catch(cl::Error e)
+    catch (cl::Error e)
     {
         std::cout << "\nError in initial copy" << std::endl;
         std::cout << e.what() << std::endl;
@@ -442,7 +442,7 @@ alg_result_t OCLLearn::run
                                     buffers.at("parents"),
                                     0, 0, all_chrom_size);
         }
-        catch(cl::Error e)
+        catch (cl::Error e)
         {
             std::cout << "\nError in copying top" << std::endl;
             std::cout << e.what() << std::endl;
