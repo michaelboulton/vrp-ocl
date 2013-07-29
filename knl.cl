@@ -384,10 +384,6 @@ __kernel void ParallelBitonic_Elitist
 __kernel void breed
 (__global const uint*          __restrict parents,
  __global       uint*          __restrict children,
- __global       uint*          __restrict route_lengths,
- __global       int *          __restrict route_starts,
- __constant     float2*  const __restrict node_coords,
- __constant     uint*    const __restrict node_demands,
  __global       uint2*   const __restrict state)
 {
     uint glob_id = get_global_id(0);
@@ -537,13 +533,13 @@ __kernel void breed
     bool parent_flip = false;
 
     // cycle numbers
-    for(ii = 1; ii < cc + 1; ii++)
+    for (ii = 1; ii < cc + 1; ii++)
     {
         // go through cycle, picking from one parent or another
-        for(jj = 0; jj < NUM_NODES; jj++)
+        for (jj = 0; jj < NUM_NODES; jj++)
         {
             // if the current cycle contained this idx
-            if(cycles[jj] == ii)
+            if (cycles[jj] == ii)
             {
                 child[jj] = parent_flip ? parent_1[jj] : parent_2[jj];
             }
