@@ -447,11 +447,7 @@ void OCLLearn::initOCL
 
         crossover_kernel.setArg(0, buffers.at("parents"));
         crossover_kernel.setArg(1, buffers.at("children"));
-        crossover_kernel.setArg(2, buffers.at("starts"));
-        crossover_kernel.setArg(3, buffers.at("results"));
-        crossover_kernel.setArg(4, buffers.at("coords"));
-        crossover_kernel.setArg(5, buffers.at("demands"));
-        crossover_kernel.setArg(6, buffers.at("rand_state"));
+        crossover_kernel.setArg(2, buffers.at("rand_state"));
     }
     catch(cl::Error e)
     {
