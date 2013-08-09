@@ -2,7 +2,7 @@
 TBB_INC_FLAG=
 TBB_LIB_FLAG=
 
-CXXFLAGS=-O3 -ggdb -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format $(TBB_INC_FLAG)
+CXXFLAGS=-O3 -std=c++98 -pedantic -Wall -Wextra -Wno-unused-variable -Werror=format $(TBB_INC_FLAG)
 LDLIBS=-lgomp -lOpenCL -lmpi $(TBB_LIB_FLAG)
 
 # factors affecting how it runs
