@@ -341,6 +341,7 @@ alg_result_t OCLLearn::run
         queue.enqueueCopyBuffer(buffers.at("sorted"),
                                 buffers.at("parents"),
                                 0, 0, all_chrom_size);
+        queue.finish();
     }
     catch (cl::Error e)
     {
@@ -441,6 +442,7 @@ alg_result_t OCLLearn::run
             queue.enqueueCopyBuffer(buffers.at("sorted"),
                                     buffers.at("parents"),
                                     0, 0, all_chrom_size);
+            queue.finish();
         }
         catch (cl::Error e)
         {

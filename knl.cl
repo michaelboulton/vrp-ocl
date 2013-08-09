@@ -166,6 +166,14 @@ __kernel void findRouteStarts
     route_starts[1] = 0;
     rr = 1;
 
+    /*
+     *  TODO
+     *  Too greedy at the moment - put in something so that if it has a certain
+     *  capacity and the distance to the next truck is really long or something
+     *  then just go back to depot. Alternatively, track distance of subroute
+     *  and just don't go over 1/10 of the distance of the route or something.
+     */
+
     // for the total length of the chromosome
     for (ii = 0; ii < NUM_NODES; ii++)
     {
