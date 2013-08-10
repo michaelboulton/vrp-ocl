@@ -25,6 +25,7 @@
 float euclideanDistance
 (point_t first, point_t second)
 {
+    /*
     unsigned int x1, y1, x2, y2;
 
     x1 = first.s[0];
@@ -33,6 +34,9 @@ float euclideanDistance
     y2 = second.s[1];
 
     return sqrt((x2-x1)*(x2-x1) + (y2-y1)*(y2-y1));
+    */
+
+    return sqrt(pow((first.s[0]-second.s[0]), 2) + pow((first.s[1]-second.s[1]), 2));
 }
 
 // FIXME this doesn't really do it right? prints out route longer than it actually is
