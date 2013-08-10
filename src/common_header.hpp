@@ -36,8 +36,6 @@
 #define __CL_ENABLE_EXCEPTIONS
 #include "CL/cl.hpp"
 
-#define KNL_FILE "knl.cl"
-
 class RunInfo;
 class OCLLearn;
 
@@ -189,29 +187,6 @@ public:
     void init
     (void);
 
-};
-
-#if defined(CVRP_USE_TBB)
-#include "tbb/task_scheduler_init.h"
-#include "tbb/blocked_range.h"
-#include "tbb/parallel_do.h"
-#include "tbb/concurrent_vector.h"
-#endif
-
-class TBBRouteMaker : protected OCLLearn
-{
-private:
-    const RunInfo info;
-    const route_vec_t all_stops;
-
-public:
-    TBBRouteMaker
-    (const RunInfo info,
-     const route_vec_t all_stops);
-
-    void operator()
-    (route_vec_t& route) const;
-    //(const tbb::blocked_range<size_t>& r) const;
 };
 
 // how to solve TSP

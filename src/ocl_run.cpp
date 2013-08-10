@@ -21,6 +21,7 @@
  */
 
 #include "common_header.hpp"
+#include <limits>
 
 extern "C" double MPI_Wtime();
 
@@ -227,26 +228,10 @@ alg_result_t OCLLearn::run
     t_0 = MPI_Wtime();
 
     // generate a load of random routes
-#if defined(CVRP_USE_TBB)
-    fprintf(stdout, "Generating %zu random routes...", GLOBAL_SIZE);
-    fflush(stdout);
-
-    // all valid routes created
-    std::vector<route_vec_t> all_routes(GLOBAL_SIZE);
-
-    tbb::task_scheduler_init init(4);
-
-    TBBRouteMaker m = TBBRouteMaker(info, all_stops);
-    tbb::parallel_do(all_routes.begin(), all_routes.end(), m);
-    fprintf(stdout, "\rGenerating routes...done.\n");
-#else
-    // all valid routes created
     std::vector<route_vec_t> all_routes(0);
-
     genChromosomes(all_routes);
-#endif
 
-    if (VERBOSE)
+    if (VERBOSE_OUTPUT)
     {
         fprintf(stdout, "\nTook %f seconds\n", MPI_Wtime() - t_0);
     }
@@ -357,10 +342,11 @@ alg_result_t OCLLearn::run
 
     for (ii = 1; ii < GENERATIONS + 1; ii++)
     {
-        #ifdef VERBOSE
-        std::cout << "\rNow on iteration " << ii << "/";
-        std::cout << GENERATIONS << " " << std::flush;
-        #endif
+        if (VERBOSE_OUTPUT)
+        {
+            std::cout << "\rNow on iteration " << ii << "/";
+            std::cout << GENERATIONS << " " << std::flush;
+        }
         /*
         *   algo
         *   1.  do foreign exchange
@@ -464,16 +450,19 @@ alg_result_t OCLLearn::run
         {
             best_route = new_best;
 
-            #ifdef VERBOSE
-            std::cout << std::endl;
-            for(jj = 0; jj < best_chromosome.size(); jj++)
+            if (VERBOSE_OUTPUT)
             {
-                std::cout << best_chromosome.at(jj) << " ";
+                fprintf(stdout, "\n");
+
+                for (jj = 0; jj < best_chromosome.size(); jj++)
+                {
+                    fprintf(stdout, "%d ", best_chromosome.at(jj));
+                }
+
+                fprintf(stdout,
+                        "\n%.2f at iteration %d after %.2f secs\n",
+                        best_route, ii, MPI_Wtime() - t_0);
             }
-            fprintf(stdout,
-                    "\n%.2f at iteration %d after %.2f secs\n",
-                    best_route, ii, MPI_Wtime() - t_0);
-            #endif
         }
 
         if (MPI_Wtime() - t_0 > MAX_TIME)
@@ -486,10 +475,12 @@ alg_result_t OCLLearn::run
 
     queue.finish();
     t_1 = MPI_Wtime();
-    #ifdef VERBOSE
-    std::cout << std::endl;
-    std::cout << "took " << t_1-t_0 << " secs" << std::endl;
-    #endif
+
+    if (VERBOSE_OUTPUT)
+    {
+        std::cout << std::endl;
+        std::cout << "took " << t_1-t_0 << " secs" << std::endl;
+    }
 
     // profiling info
     if (PROFILER_ON)

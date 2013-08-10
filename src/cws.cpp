@@ -164,10 +164,11 @@ void OCLLearn::genChromosomes
     const node_map_t& node_coords = info.node_coords;
     const demand_vec_t& node_demands = info.node_demands;
 
-    #ifdef VERBOSE
-    std::cout << std::endl;
-    std::cout << "Generating " << GLOBAL_SIZE << " random routes ... 0" << std::flush;
-    #endif
+    if (VERBOSE_OUTPUT)
+    {
+        std::cout << std::endl;
+        std::cout << "Generating " << GLOBAL_SIZE << " random routes ... 0" << std::flush;
+    }
 
     // TODO this while loop is the bit that needs to be task parallelised
     // while we still dont have enough chromosomes
@@ -325,18 +326,15 @@ void OCLLearn::genChromosomes
         if (!kk
         // right number of trucks being used the route
         && cur_vehicles <= NUM_SUBROUTES
-        #ifdef ROUTE_FIND_CHECK
-        // haven't already generated it
-        && all_routes.end() == std::find(all_routes.begin(),
-                                         all_routes.end(),
-                                         total_route)
-        #endif
         )
         {
             all_routes.push_back(total_route);
-            #ifdef VERBOSE
-            std::cout << "\rGenerating " << GLOBAL_SIZE << " random routes ... " << all_routes.size() <<std::flush;
-            #endif
+            if (VERBOSE_OUTPUT)
+            {
+                fprintf(stdout, "\rGenerating %lu random routes...%lu",
+                        GLOBAL_SIZE, all_routes.size());
+                fflush(stdout);
+            }
         }
     }
     std::cout << std::endl;

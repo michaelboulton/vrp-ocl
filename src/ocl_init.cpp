@@ -90,22 +90,24 @@ void OCLLearn::initOCL
     std::string plat_info;
     unsigned int ii;
 
-    #ifdef VERBOSE
-    std::cout << platforms.size() << " platforms";
-    std::cout << std::endl;
-    std::cout << "looking for devices of type ";
-    std::cout << (DEVICE_TYPE==CL_DEVICE_TYPE_CPU ? "CPU" : "GPU") << ": ";
-    std::cout << std::endl;
-    #endif
+    if (VERBOSE_OUTPUT)
+    {
+        std::cout << platforms.size() << " platforms";
+        std::cout << std::endl;
+        std::cout << "looking for devices of type ";
+        std::cout << (DEVICE_TYPE==CL_DEVICE_TYPE_CPU ? "CPU" : "GPU") << ": ";
+        std::cout << std::endl;
+    }
 
     for(ii=0;ii<platforms.size();ii++)
     {
         try
         {
             platforms.at(ii).getInfo(CL_PLATFORM_NAME, &plat_info);
-            #ifdef VERBOSE
-            std::cout << plat_info;
-            #endif
+            if (VERBOSE_OUTPUT)
+            {
+                std::cout << plat_info;
+            }
 
             cl_context_properties properties[3] = {CL_CONTEXT_PLATFORM,
                 (cl_context_properties)(platforms.at(ii))(), 0};
@@ -120,9 +122,10 @@ void OCLLearn::initOCL
         {
             if (devices.size() < 1)
             {
-                #ifdef VERBOSE
-                std::cout << " - invalid type" << std::endl;
-                #endif
+                if (VERBOSE_OUTPUT)
+                {
+                    std::cout << " - invalid type" << std::endl;
+                }
             }
             else
             {
@@ -186,23 +189,14 @@ void OCLLearn::initOCL
     // which mutation to use
     if (mutate_strategy == REVERSE)
     {
-        #ifdef VERBOSE
-        std::cout << "Using random range reverse for mutation" << std::endl;
-        #endif
         options << "-DMUT_REVERSE ";
     }
     else if (mutate_strategy == SLIDE)
     {
-        #ifdef VERBOSE
-        std::cout << "Using slide for mutation" << std::endl;
-        #endif
         options << "-DMUT_SLIDE ";
     }
     else if (mutate_strategy == SWAP)
     {
-        #ifdef VERBOSE
-        std::cout << "Using random range swap for mutation" << std::endl;
-        #endif
         options << "-DMUT_SWAP ";
     }
 
@@ -210,30 +204,21 @@ void OCLLearn::initOCL
     if (breed_strategy == CX)
     {
         options << "-DBREED_CX ";
-        #ifdef VERBOSE
-        std::cout << "Using cx crossover" << std::endl;
-        #endif
     }
     else if (breed_strategy == PMX)
     {
         options << "-DBREED_PMX ";
-        #ifdef VERBOSE
-        std::cout << "Using pmx crossover" << std::endl;
-        #endif
     }
     else if (breed_strategy == O1)
     {
         options << "-DBREED_O1 ";
-        #ifdef VERBOSE
-        std::cout << "Using order 1 crossover" << std::endl;
-        #endif
     }
 
     std::cout << "options:" << std::endl;
     std::cout << options.str() << std::endl;
 
     // compile it
-    all_program = createProg(KNL_FILE, options.str());
+    all_program = createProg("./src/knl.cl", options.str());
 
     /****   buffers   *******/
 
