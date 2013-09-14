@@ -26,7 +26,8 @@ There are other parameters but these ones make the most difference
 ### Things to do
 
 * Stop it getting stuck in a local minimum
-* Add rotation mutation
 * Add edge recombination crossover
 * Optimisation
+
+It would also probably be better to redo all of the host side code in Python and use PyOpenCL because a lot of this stuff is more stuied to a scripting language, and it would be easier to add parsing for different kinds of graph layouts
 

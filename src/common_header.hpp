@@ -39,12 +39,6 @@
 class RunInfo;
 class OCLLearn;
 
-//typedef std::pair<int, int> point_t;
-// essentially the same thing
-//typedef struct point {
-//    int first;
-//    int second;
-//} point_t;
 typedef cl_float2 point_t;
 
 // index of 2 points and the distance between them
