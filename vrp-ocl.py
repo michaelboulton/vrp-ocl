@@ -74,11 +74,19 @@ class OCLRun(object):
             setattr(self, name + "_buf", cl.Buffer(self.context,
                     flags, hostbuf=host_arr))
 
+        zero_chromosome_array = np.zeros(self.run_info.dimension*self.run_info.total_chromosomes,
+            dtype=np.uint32)
+        createBuf(zero_chromosome_array, "parents")
+        createBuf(zero_chromosome_array, "children")
+
+        createBuf(np.zeros(self.run_info.num_trucks*2*self.run_info.total_chromosomes,
+            dtype=np.int32), "route_starts")
+
         #node_coords = self.run_info.node_info[:,1:3].astype(cl_array.vec.float2)
-        node_coords = self.run_info.node_info[:,1:3].astype(np.float32)
-        node_demands = self.run_info.node_info[:,-1].astype(np.uint32)
-        createBuf(node_coords, "node_coords", flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
-        createBuf(node_demands, "node_demands", flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
+        node_coords = self.run_info.node_info[:,1:3]
+        node_demands = self.run_info.node_info[:,-1]
+        createBuf(node_coords.astype(np.float32), "node_coords")
+        createBuf(node_demands.astype(np.uint32), "node_demands")
 
         createBuf(np.zeros(2*self.run_info.total_chromosomes,
             dtype=np.float32), "results")
