@@ -36,6 +36,41 @@ class OCLRun(object):
                 kernel.get_info(cl.kernel_info.FUNCTION_NAME), \
                 (event.profile.end - event.profile.start)/1000000000.)
 
+    def findRouteStarts(self):
+        self.timeKnl(self.program.findRouteStarts,
+            self.queue, self.global_size, self.local_size,
+            self.parents_buf,
+            self.node_demands_buf,
+            self.route_starts_buf)
+
+    def calcFitness(self):
+        self.timeKnl(self.program.fitness,
+            self.queue, self.global_size, self.local_size,
+            self.parents_buf,
+            self.results_buf,
+            self.node_coords_buf,
+            self.route_starts_buf)
+
+    def neSort(self):
+        self.timeKnl(self.program.ParallelBitonic_NonElitist,
+            self.queue, self.global_size, self.local_size,
+            self.results_buf,
+            self.parents_buf,
+            self.sorted_buf)
+
+    def crossover(self):
+        self.timeKnl(self.program.breed,
+            self.queue, self.global_size, self.local_size,
+            self.parents_buf,
+            self.children_buf,
+            self.rand_state_buf)
+
+    def mutate(self):
+        self.timeKnl(self.program.mutate,
+            self.queue, self.global_size, self.local_size,
+            self.children_buf,
+            self.rand_state_buf)
+
     def run(self):
         # XXX debugging - print out the value of a device array
         def cw(name, idx=None, size=None):
@@ -49,21 +84,32 @@ class OCLRun(object):
             else:
                 return tmp[idx]
 
-        global_size = self.run_info.total_chromosomes,
-        local_size = self.run_info.pop_size,
+        self.global_size = self.run_info.total_chromosomes,
+        self.local_size = self.run_info.pop_size,
 
-        print global_size
-        print local_size
+        self.findRouteStarts()
+        self.calcFitness()
+        self.neSort()
 
-        while 1:
-            self.timeKnl(self.program.findRouteStarts,
-                self.queue,
-                global_size,
-                local_size,
-                self.parents_buf,
-                self.node_demands_buf,
-                self.route_starts_buf)
-            
+        self.queue.finish()
+        cl.enqueue_copy(self.queue, self.sorted_buf, self.parents_buf)
+        self.queue.finish()
+
+        for i in xrange(self.run_info.num_iterations):
+            self.crossover()
+            self.mutate()
+
+            self.findRouteStarts()
+
+            self.neSort()
+
+            self.queue.finish()
+            cl.enqueue_copy(self.queue, self.sorted_buf, self.parents_buf)
+            self.queue.finish()
+
+            self.queue.finish()
+            print "woow i died??"
+
             return
 
     def genInitialRoutes(self):
