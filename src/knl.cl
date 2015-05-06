@@ -64,7 +64,7 @@ inline uint MWC64X(__global uint2* const state)
 /*
  *  Returns euclidean distance between two points
  */
-#if 0
+#if 1
 // function version makes whole thing run ~10% faster than macro version ???
 inline float euclideanDistance
 (const float2 first,

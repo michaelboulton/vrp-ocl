@@ -198,6 +198,7 @@ class OCLRun(object):
             itertools.repeat((self.run_info.node_info[:,:3]),
             self.run_info.total_chromosomes), chunksize=10)
         mpool.close()
+        mpool.join()
 
         return np.hstack(better_routes)
 
@@ -218,8 +219,10 @@ class OCLRun(object):
         #node_coords = self.run_info.node_info[:,1:3].astype(cl_array.vec.float2)
         node_coords = self.run_info.node_info[:,1:3]
         node_demands = self.run_info.node_info[:,-1]
-        createBuf(node_coords.astype(np.float32), "node_coords")
-        createBuf(node_demands.astype(np.uint32), "node_demands")
+        createBuf(node_coords.astype(np.float32), "node_coords",
+            flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
+        createBuf(node_demands.astype(np.uint32), "node_demands",
+            flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
 
         createBuf(np.zeros(2*self.run_info.total_chromosomes,
             dtype=np.float32), "results")
@@ -235,7 +238,6 @@ class OCLRun(object):
     def initPoints(self):
         options = ""
 
-        # FIXME options for things like mutation not passed correctly
         # add options for constants
         options += "-D NOTEST "
         options += "-D NUM_NODES={0:d} ".format(self.run_info.dimension)
