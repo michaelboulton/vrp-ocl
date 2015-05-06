@@ -389,6 +389,15 @@ __kernel void ParallelBitonic_Elitist
     }
 }
 
+__kernel void copy_back
+(__global const uint*          __restrict sorted,
+ __global       uint*          __restrict parents)
+{
+    uint glob_id = get_global_id(0);
+
+    parents[glob_id] = sorted[glob_id];
+}
+
 __kernel void breed
 (__global const uint*          __restrict parents,
  __global       uint*          __restrict children,

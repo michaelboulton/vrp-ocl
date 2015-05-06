@@ -3,6 +3,7 @@
 import pyopencl as cl
 import pyopencl.array as cl_array
 import os
+import random
 import numpy as np
 import itertools
 mf = cl.mem_flags
@@ -10,6 +11,34 @@ mf = cl.mem_flags
 from src.run_params import RunInfo
 
 import matplotlib.pyplot as plt
+
+def gen_route_cws(node_coords):
+    node_coords = np.random.permutation(node_coords)
+
+    route = node_coords.copy()*0
+    route[0] = node_coords[0, :]
+
+    old_remaining = node_coords[1:,:]
+    last_added = 0
+
+    while len(old_remaining) > 1:
+        remaining = np.vstack(filter(lambda x:x[0] not in route[:, 0], old_remaining))
+        distances = np.sqrt(
+            (remaining[:,1] - route[last_added,1])**2 +
+            (remaining[:,2] - route[last_added,2])**2)
+
+        argmin = np.argmin(distances)
+        if random.random() < 0.95:
+            route[last_added + 1] = remaining[argmin]
+        else:
+            route[last_added + 1] = remaining[random.random() * len(remaining)]
+
+        last_added += 1
+        old_remaining = remaining
+
+    route[-1] = old_remaining[0]
+
+    return route[:, 0]
 
 class OCLRun(object):
 
@@ -79,6 +108,12 @@ class OCLRun(object):
             self.children_buf,
             self.rand_state_buf)
 
+    def copyBack(self):
+        self.timeKnl(self.program.copy_back,
+            self.queue, self.global_size, self.local_size,
+            self.sorted_buf,
+            self.parents_buf)
+
     def foreignExchange(self):
         self.timeKnl(self.program.foreignExchange,
             self.queue, self.global_size, self.local_size,
@@ -120,11 +155,12 @@ class OCLRun(object):
 
             self.neSort()
 
-            self.queue.finish()
-            cl.enqueue_copy(self.queue, self.sorted_buf, self.parents_buf)
-            self.queue.finish()
+            self.copyBack()
 
             self.foreignExchange()
+
+            if not (i % 50):
+                self.getBestRoute()
 
         self.getBestRoute()
 
@@ -144,8 +180,8 @@ class OCLRun(object):
         cl.enqueue_copy(self.queue, host_chrom, self.parents_buf,
             device_offset=argmin*self.run_info.dimension*4)
 
-        np.set_printoptions(linewidth=1000000)
         print smallest_route
+        np.set_printoptions(linewidth=1000000)
         print host_chrom
 
     def genInitialRoutes(self):
@@ -154,10 +190,16 @@ class OCLRun(object):
 
         map(np.random.shuffle, lots_of_routes)
 
-        # TODO not startign with a good guess - hope it will figure it out quickly
         random_routes = lots_of_routes.astype(np.uint32)
 
-        return random_routes
+        from multiprocessing import Pool
+        mpool = Pool()
+        better_routes = mpool.imap_unordered(gen_route_cws,
+            itertools.repeat((self.run_info.node_info[:,:3]),
+            self.run_info.total_chromosomes), chunksize=10)
+        mpool.close()
+
+        return np.hstack(better_routes)
 
     def initDevBuffers(self):
         # copy to device
