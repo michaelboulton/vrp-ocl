@@ -65,26 +65,26 @@ class OCLRun(object):
                 kernel.get_info(cl.kernel_info.FUNCTION_NAME), \
                 (event.profile.end - event.profile.start)/1000000000.)
 
-    def findRouteStarts(self):
+    def findRouteStarts(self, which_arr):
         self.timeKnl(self.program.findRouteStarts,
             self.queue, self.global_size, self.local_size,
-            self.parents_buf,
+            which_arr,
             self.node_demands_buf,
             self.route_starts_buf)
 
-    def calcFitness(self):
+    def calcFitness(self, which_arr):
         self.timeKnl(self.program.fitness,
             self.queue, self.global_size, self.local_size,
-            self.parents_buf,
+            which_arr,
             self.results_buf,
             self.node_coords_buf,
             self.route_starts_buf)
 
-    def neSort(self):
+    def neSort(self, which_array):
         self.timeKnl(self.program.ParallelBitonic_NonElitist,
             self.queue, self.global_size, self.local_size,
             self.results_buf,
-            self.parents_buf,
+            which_array,
             self.sorted_buf)
 
     def crossover(self):
@@ -94,7 +94,7 @@ class OCLRun(object):
             self.children_buf,
             self.rand_state_buf)
 
-    def TSPSolve(self):
+    def TSPSolve(self, which_arr):
         self.timeKnl(self.program.simpleTSP,
             self.queue, self.global_size, self.local_size,
             self.parents_buf,
@@ -136,28 +136,26 @@ class OCLRun(object):
         self.global_size = self.run_info.total_chromosomes,
         self.local_size = self.run_info.pop_size,
 
-        self.findRouteStarts()
-        self.calcFitness()
-        self.neSort()
-
-        self.queue.finish()
-        cl.enqueue_copy(self.queue, self.sorted_buf, self.parents_buf)
-        self.queue.finish()
+        self.findRouteStarts(self.parents_buf)
+        self.TSPSolve(self.parents_buf)
+        self.calcFitness(self.parents_buf)
+        self.neSort(self.parents_buf)
+        self.copyBack()
 
         for i in xrange(self.run_info.num_iterations):
+            self.foreignExchange()
             self.crossover()
             self.mutate()
 
-            self.findRouteStarts()
+            self.findRouteStarts(self.children_buf)
 
             if not (i % self.run_info.tsp_solve_frequency):
-                self.TSPSolve()
+                self.TSPSolve(self.children_buf)
 
-            self.neSort()
+            self.calcFitness(self.children_buf)
+            self.neSort(self.children_buf)
 
             self.copyBack()
-
-            self.foreignExchange()
 
             if not (i % 50):
                 self.getBestRoute()
@@ -165,8 +163,10 @@ class OCLRun(object):
         self.getBestRoute()
 
     def getBestRoute(self):
-        self.findRouteStarts()
-        self.calcFitness()
+        self.findRouteStarts(self.parents_buf)
+        self.calcFitness(self.parents_buf)
+        self.neSort(self.parents_buf)
+        self.calcFitness(self.parents_buf)
 
         results = np.zeros(self.global_size, dtype=np.float32)
 

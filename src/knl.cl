@@ -672,6 +672,8 @@ __kernel void breed
         }
     }
 
+#else
+    #error No breeding strategy specified
 #endif
 
     // increment children to point to this threads chromosome child
@@ -790,6 +792,8 @@ __kernel void mutate
             SWAP(chromosome[ii], chromosome[jj]);
         }
 
+#else
+    #error No mutation strategy specified
 #endif
 
     }
