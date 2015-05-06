@@ -19,7 +19,7 @@ class OCLRun(object):
         # args are set every time, but it has next to no overhead
         event = kernel(*args, **kwargs)
 
-        if self.cl_profiling:
+        if self.run_info.ocl_profiling:
             event.wait()
 
             try:
@@ -49,24 +49,33 @@ class OCLRun(object):
             else:
                 return tmp[idx]
 
+        global_size = self.run_info.total_chromosomes,
+        local_size = self.run_info.pop_size,
+
+        print global_size
+        print local_size
+
         while 1:
-            self.queue.finish()
-
-            self.timeKnl(cl.enqueue_copy,
+            self.timeKnl(self.program.findRouteStarts,
                 self.queue,
-                self.u,
-                self.u_buf)
+                global_size,
+                local_size,
+                self.parents_buf,
+                self.node_demands_buf,
+                self.route_starts_buf)
+            
+            return
 
-            self.timeKnl(cl.enqueue_copy,
-                self.queue,
-                self.u_buf,
-                self.u)
+    def genInitialRoutes(self):
+        route = self.run_info.node_info[:,0]
+        lots_of_routes = np.tile(route, (self.run_info.total_chromosomes, 1))
 
-            if iteration > 500:
-                break
-                plt.imshow(self.u, cmap=plt.cm.pink)
-                plt.show()
-                break
+        map(np.random.shuffle, lots_of_routes)
+
+        # TODO not startign with a good guess - hope it will figure it out quickly
+        random_routes = lots_of_routes.astype(np.uint32)
+
+        return random_routes
 
     def initDevBuffers(self):
         # copy to device
@@ -74,10 +83,10 @@ class OCLRun(object):
             setattr(self, name + "_buf", cl.Buffer(self.context,
                     flags, hostbuf=host_arr))
 
-        zero_chromosome_array = np.zeros(self.run_info.dimension*self.run_info.total_chromosomes,
-            dtype=np.uint32)
-        createBuf(zero_chromosome_array, "parents")
-        createBuf(zero_chromosome_array, "children")
+        createBuf(self.genInitialRoutes(), "parents")
+
+        createBuf(np.zeros(self.run_info.dimension*self.run_info.total_chromosomes,
+            dtype=np.uint32), "children")
 
         createBuf(np.zeros(self.run_info.num_trucks*2*self.run_info.total_chromosomes,
             dtype=np.int32), "route_starts")
@@ -130,7 +139,7 @@ class OCLRun(object):
 
     def __del__(self):
         """ print out profiling info on exit """
-        if self.cl_profiling and len(self.kernel_times) > 0:
+        if self.run_info.ocl_profiling and len(self.kernel_times) > 0:
             total = sum(self.kernel_times.values())
             print "Total kernel time {0:2.2f} secs".format(total)
             for k,v in self.kernel_times.items():
@@ -175,7 +184,6 @@ class OCLRun(object):
     def __init__(self):
         # for optional profiling
         self.kernel_times = {}
-        self.cl_profiling = True
 
         # verbose output
         os.environ['PYOPENCL_COMPILER_OUTPUT'] = "1"
