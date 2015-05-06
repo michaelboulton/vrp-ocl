@@ -137,7 +137,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Number of generations of genetic algorithm""",
                           action='store')
 
-        self.add_argument("--tsp_solve_rate",
+        self.add_argument("--tsp_solve_frequency",
                           nargs=1,
                           default=[10],
                           type=int,

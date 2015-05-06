@@ -65,10 +65,24 @@ class OCLRun(object):
             self.children_buf,
             self.rand_state_buf)
 
+    def TSPSolve(self):
+        self.timeKnl(self.program.simpleTSP,
+            self.queue, self.global_size, self.local_size,
+            self.parents_buf,
+            self.route_starts_buf,
+            self.node_coords_buf,
+            self.node_demands_buf)
+
     def mutate(self):
         self.timeKnl(self.program.mutate,
             self.queue, self.global_size, self.local_size,
             self.children_buf,
+            self.rand_state_buf)
+
+    def foreignExchange(self):
+        self.timeKnl(self.program.foreignExchange,
+            self.queue, self.global_size, self.local_size,
+            self.parents_buf,
             self.rand_state_buf)
 
     def run(self):
@@ -101,16 +115,38 @@ class OCLRun(object):
 
             self.findRouteStarts()
 
+            if not (i % self.run_info.tsp_solve_frequency):
+                self.TSPSolve()
+
             self.neSort()
 
             self.queue.finish()
             cl.enqueue_copy(self.queue, self.sorted_buf, self.parents_buf)
             self.queue.finish()
 
-            self.queue.finish()
-            print "woow i died??"
+            self.foreignExchange()
 
-            return
+        self.getBestRoute()
+
+    def getBestRoute(self):
+        self.findRouteStarts()
+        self.calcFitness()
+
+        results = np.zeros(self.global_size, dtype=np.float32)
+
+        self.queue.finish()
+        cl.enqueue_copy(self.queue, results, self.results_buf)
+
+        argmin = np.argmin(results)
+        smallest_route = results[argmin]
+
+        host_chrom = np.zeros(self.run_info.dimension, dtype=np.uint32)
+        cl.enqueue_copy(self.queue, host_chrom, self.parents_buf,
+            device_offset=argmin*self.run_info.dimension*4)
+
+        np.set_printoptions(linewidth=1000000)
+        print smallest_route
+        print host_chrom
 
     def genInitialRoutes(self):
         route = self.run_info.node_info[:,0]
@@ -160,15 +196,20 @@ class OCLRun(object):
         # FIXME options for things like mutation not passed correctly
         # add options for constants
         options += "-D NOTEST "
-        options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.pop_size)
-        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes)
-        options += "-D MUT_RATE={0:d} ".format(self.run_info.mutation_rate)
+        options += "-D NUM_NODES={0:d} ".format(self.run_info.dimension)
         options += "-D NUM_SUBROUTES={0:d} ".format(self.run_info.num_trucks)
+        options += "-D MAX_PER_ROUTE={0:d} ".format(self.run_info.stops_per_route)
         options += "-D MAX_CAPACITY={0:d} ".format(self.run_info.capacity)
         options += "-D MIN_CAPACITY={0:d} ".format(self.run_info.min_capacity)
-        options += "-D NUM_NODES={0:d} ".format(self.run_info.dimension)
+        options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.pop_size)
+        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes)
         options += "-D DEPOT_NODE={0:d} ".format(self.run_info.depot)
-        options += "-D MAX_PER_ROUTE={0:d} ".format(self.run_info.stops_per_route)
+        options += "-D ARENA_SIZE={0:d} ".format(self.run_info.arena_size)
+        options += "-D MUT_RATE={0:d} ".format(self.run_info.mutation_rate)
+
+        # breed/mutation types
+        options += "-D MUT_{0:s} ".format(self.run_info.mutation_strategy)
+        options += "-D BREED_{0:s} ".format(self.run_info.breed_strategy)
 
         # opencl options
         options += "-cl-mad-enable "
