@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import pyopencl as cl
+import pyopencl.array as cl_array
 import os
 import numpy as np
 import itertools
@@ -69,43 +70,42 @@ class OCLRun(object):
 
     def initDevBuffers(self):
         # copy to device
-        def createBuf(host_arr, name):
+        def createBuf(host_arr, name, flags=mf.READ_WRITE|mf.COPY_HOST_PTR):
             setattr(self, name + "_buf", cl.Buffer(self.context,
-                    mf.READ_WRITE | mf.COPY_HOST_PTR, hostbuf=host_arr))
+                    flags, hostbuf=host_arr))
 
-        # create one of these buffers buffer for each sim - done in parallel
-        def createOnes(name):
-            tmp = np.ones(self.grid_size)
-            createBuf(tmp, name)
+        #node_coords = self.run_info.node_info[:,1:3].astype(cl_array.vec.float2)
+        node_coords = self.run_info.node_info[:,1:3].astype(np.float32)
+        node_demands = self.run_info.node_info[:,-1].astype(np.uint32)
+        createBuf(node_coords, "node_coords", flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
+        createBuf(node_demands, "node_demands", flags=mf.READ_ONLY|mf.COPY_HOST_PTR)
 
-        createOnes("Kx")
-        createOnes("Ky")
-        createOnes("r")
-        createOnes("sd")
-        
-        coefs = np.ones(200)
-        createBuf(coefs, "alpha")
-        createBuf(coefs, "beta")
+        createBuf(np.zeros(2*self.run_info.total_chromosomes,
+            dtype=np.float32), "results")
+        createBuf(np.zeros(2*self.run_info.dimension*self.run_info.total_chromosomes,
+            dtype=np.uint32), "sorted")
 
-        self.u = np.ones(self.grid_shape)
-        self.u[10:20, 10:20] = 50
-
-        createBuf(self.u, "u")
+        random_numbers  = np.random.rand(self.run_info.total_chromosomes*2)
+        random_numbers *= np.iinfo(np.uint32).max
+        random_numbers  = random_numbers.astype(dtype=np.uint32)
+        createBuf(random_numbers, "rand_state")
+        createBuf(random_numbers, "rand_out")
 
     def initPoints(self):
         options = ""
 
+        # FIXME options for things like mutation not passed correctly
         # add options for constants
         options += "-D NOTEST "
-        options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.args["pop_size"])
-        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.args["pop_size"]*self.run_info.args["num_populations"])
-        options += "-D MUT_RATE={0:d} ".format(self.run_info.args["mutation_rate"])
-        options += "-D NUM_SUBROUTES={0:d} ".format(self.run_info.args["num_trucks"])
-        options += "-D MAX_CAPACITY={0:d} ".format(self.run_info.args["capacity"])
-        options += "-D MIN_CAPACITY={0:d} ".format(self.run_info.args["min_capacity"])
-        options += "-D NUM_NODES={0:d} ".format(self.run_info.args["dimension"])
-        options += "-D DEPOT_NODE={0:d} ".format(self.run_info.args["depot"])
-        options += "-D MAX_PER_ROUTE={0:d} ".format(self.run_info.args["stops_per_route"])
+        options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.pop_size)
+        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes)
+        options += "-D MUT_RATE={0:d} ".format(self.run_info.mutation_rate)
+        options += "-D NUM_SUBROUTES={0:d} ".format(self.run_info.num_trucks)
+        options += "-D MAX_CAPACITY={0:d} ".format(self.run_info.capacity)
+        options += "-D MIN_CAPACITY={0:d} ".format(self.run_info.min_capacity)
+        options += "-D NUM_NODES={0:d} ".format(self.run_info.dimension)
+        options += "-D DEPOT_NODE={0:d} ".format(self.run_info.depot)
+        options += "-D MAX_PER_ROUTE={0:d} ".format(self.run_info.stops_per_route)
 
         # opencl options
         options += "-cl-mad-enable "
@@ -141,7 +141,7 @@ class OCLRun(object):
         for i in all_devices:
             print " {0:s}".format(i)
 
-        device_idx = self.run_info.args["ocl_device"]
+        device_idx = self.run_info.ocl_device
 
         try:
             self.device = all_devices[device_idx]
@@ -158,7 +158,7 @@ class OCLRun(object):
         self.context = cl.Context([self.device])
         #self.context = cl.create_some_context()
 
-        if self.run_info.args["ocl_profiling"]:
+        if self.run_info.ocl_profiling:
             self.queue = cl.CommandQueue(self.context, self.device,
                     properties=cl.command_queue_properties.PROFILING_ENABLE)
         else:

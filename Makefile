@@ -1,4 +1,4 @@
-CXXFLAGS=-O3 -std=c++98 -Wall -Wextra -Wno-unused-variable -Werror=format
+CXXFLAGS=-O3 -march=native -std=c++98 -Wall -Wextra -Wno-unused-variable -Werror=format
 LDLIBS=-lOpenCL -lmpi -lstdc++ -lm -lgomp
 
 .EXPORT_ALL_VARIABLES: 

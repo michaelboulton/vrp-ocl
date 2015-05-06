@@ -11,16 +11,16 @@ import pyopencl as cl
 # run specific stuff
 class RunInfo(object):
     def parseProblem(self):
-        with open(self.args["input_file"], "r") as input_file:
+        with open(self.input_file, "r") as input_file:
             all_lines = input_file.readlines()
 
         for line in all_lines:
             match = re.search("CAPACITY\s+:\s+([0-9]+)", line)
             if match:
-                self.args["capacity"] = int(match.groups()[0])
+                setattr(self, "capacity", int(match.groups()[0]))
             match = re.search("DIMENSION\s+:\s+([0-9]+)", line)
             if match:
-                self.args["dimension"] = int(match.groups()[0])
+                setattr(self, "dimension", int(match.groups()[0]))
 
         def read_block(start_label, end_label):
             block_txt = [i for i in
@@ -33,13 +33,13 @@ class RunInfo(object):
         depot = read_block("DEPOT_SECTION", "EOF")[:-1]
         if len(depot) > 1:
             raise RuntimeError("Cannot handle more than one depot")
-        self.args["depot"] = int(depot[0])
+        setattr(self, "depot", int(depot[0]))
 
         print json.dumps(self.args, indent=1)
 
         node_coords = read_block("NODE_COORD_SECTION", "DEMAND_SECTION")
         demand = read_block("DEMAND_SECTION", "DEPOT_SECTION")
-        self.args["node_info"] = np.vstack((node_coords.T, demand[:,1])).T
+        setattr(self, "node_info", np.vstack((node_coords.T, demand[:,1])).T)
 
     def __init__(self, description, no_country=False):
         parser = InputParser(description)
@@ -49,14 +49,16 @@ class RunInfo(object):
         for i in self._parsed.__dict__:
             try:
                 if len(self._parsed.__dict__[i]) > 1:
-                    self.args[i] = self._parsed.__dict__[i]
+                    setattr(self, i, self._parsed.__dict__[i])
                 else:
                     if self._parsed.__dict__[i]:
-                        self.args[i] = self._parsed.__dict__[i][0]
+                        setattr(self, i, self._parsed.__dict__[i][0])
             except TypeError as e:
-                self.args[i] = self._parsed.__dict__[i]
+                setattr(self, i, self._parsed.__dict__[i])
 
-        if self.args["verbose"]:
+        self.total_chromosomes = self.pop_size*self.num_populations
+
+        if self.verbose:
             print self.args
 
         self.parseProblem()
