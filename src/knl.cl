@@ -147,8 +147,8 @@ __kernel void findRouteStarts
     uint ii, rr;
 
     // increment pointers to point to this thread's chromosome values
-    chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
-    route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
+    chromosomes  += LOCAL_SIZE*group_id*NUM_NODES +     loc_id*NUM_NODES;
+    route_starts += LOCAL_SIZE*group_id*NUM_SUBROUTES + loc_id*NUM_SUBROUTES;
 
     // stuff currently in truck - starts fully loaded
     int cargo_left = MAX_CAPACITY;
@@ -910,7 +910,7 @@ __kernel void foreignExchange
 {
     uint loc_id = get_local_id(0);
     uint group_id = get_group_id(0);
-    uint num_groups = GLOBAL_SIZE / LOCAL_SIZE;
+    uint num_groups = get_num_groups(0);
 
     // the best item from each group gets swapped
     if (loc_id == 0 && group_id < num_groups / 2)

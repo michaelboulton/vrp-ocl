@@ -38,7 +38,7 @@ def gen_route_cws(node_coords):
 
     route[-1] = old_remaining[0]
 
-    return route[:, 0]
+    return route[:, 0] - 1
 
 class OCLRun(object):
 
@@ -182,7 +182,7 @@ class OCLRun(object):
 
         print smallest_route
         np.set_printoptions(linewidth=1000000)
-        print host_chrom
+        print host_chrom + 1
 
     def genInitialRoutes(self):
         route = self.run_info.node_info[:,0]
@@ -246,7 +246,7 @@ class OCLRun(object):
         options += "-D MAX_CAPACITY={0:d} ".format(self.run_info.capacity)
         options += "-D MIN_CAPACITY={0:d} ".format(self.run_info.min_capacity)
         options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.pop_size)
-        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes)
+        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes*self.run_info.dimension)
         options += "-D DEPOT_NODE={0:d} ".format(self.run_info.depot)
         options += "-D ARENA_SIZE={0:d} ".format(self.run_info.arena_size)
         options += "-D MUT_RATE={0:d} ".format(self.run_info.mutation_rate)
