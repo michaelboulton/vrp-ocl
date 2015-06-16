@@ -22,16 +22,20 @@
 
 // for IOC
 #ifndef NOTEST
-#define MUT_RATE 25
+#define NOTEST 
+#define NUM_NODES 76 
+#define NUM_SUBROUTES 13 
+#define MAX_PER_ROUTE 16 
+#define MAX_CAPACITY 220 
+#define MIN_CAPACITY 0 
+#define LOCAL_SIZE 128 
+#define GLOBAL_SIZE 512 
+#define DEPOT_NODE 1 
+#define ARENA_SIZE 4 
+#define MUT_RATE 1 
+#define SUMNUM 2850 
 #define MUT_SWAP
-#define NUM_SUBROUTES 7
-#define MIN_CAPACITY 0
-#define NUM_NODES 75
-#define MAX_CAPACITY 220
-#define LOCAL_SIZE 256
-#define GLOBAL_SIZE 256
-#define MAX_PER_ROUTE 12
-#define DEPOT_NODE 0
+#define BREED_CX
 #endif
 
 // for sorting kernels
@@ -338,14 +342,12 @@ __kernel void ParallelBitonic_Elitist
     if (loc_id > LOCAL_SIZE)
     {
         // then use this to access children
-        loc_div = loc_id / 2;
         sort_pair.idx = children + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div];
     }
     else
     {
         // then use this to access parents
-        loc_div = loc_id / 2;
         sort_pair.idx = parents + LOCAL_SIZE * NUM_NODES * group_id + loc_div * NUM_NODES;
         sort_pair.route_length = route_lengths[loc_div + GLOBAL_SIZE];
     }
@@ -498,7 +500,9 @@ __kernel void breed
     // index of current element to look at
     uint cur_idx;
 
-    do
+    int sum = 0;
+
+    for (sum = 0; sum < NUM_NODES; cc++)
     {
         // find somewhere random to start this cycle
         do
@@ -521,30 +525,10 @@ __kernel void breed
                     break;
                 }
             }
-        }
 
-        // if still doing crossover
-        bool finished = false;
-
-        // see if they've all been added
-        for (ii = 0; ii < NUM_NODES; ii++)
-        {
-            // if even a single one remains, dont finish
-            if (!cycles[ii])
-            {
-                finished = true;
-                break;
-            }
+            sum += 1;
         }
-        if (!finished)
-        {
-            break;
-        }
-
     }
-    // increment cycle number
-    // while it hasn't been told to end
-    while (cc++);
 
     // flip parent between cycles
     bool parent_flip = false;
@@ -822,8 +806,8 @@ __kernel void simpleTSP
     uint ii, jj, kk, oo;
 
     // offset
-    chromosomes  += LOCAL_SIZE * group_id * NUM_NODES + loc_id * NUM_NODES;
-    route_starts += LOCAL_SIZE * group_id * NUM_SUBROUTES + loc_id * NUM_SUBROUTES;
+    chromosomes  += LOCAL_SIZE*group_id*NUM_NODES     + loc_id*NUM_NODES;
+    route_starts += LOCAL_SIZE*group_id*NUM_SUBROUTES + loc_id*NUM_SUBROUTES;
 
     #if 0
     // copy chromosome into private memory
@@ -935,6 +919,34 @@ __kernel void foreignExchange
         {
             SWAP(local_chrom[ii], foreign_chrom[ii]);
         }
+    }
+}
+
+__kernel void eliteExchange
+(__global uint* __restrict chromosomes,
+ __global uint2* const __restrict state)
+{
+    uint loc_id = get_local_id(0);
+    uint group_id = get_group_id(0);
+    uint glob_id = get_group_id(0);
+    uint num_groups = get_num_groups(0);
+
+    // send to group 0 - the 'elite' group
+
+    // best in this population
+    __global uint* local_chrom = chromosomes + LOCAL_SIZE*glob_id*NUM_NODES;
+
+    // Swap with a worse one from current thing
+    //__global uint* foreign_chrom = chromosomes + LOCAL_SIZE*NUM_NODES - glob_id*NUM_NODES;
+    __global uint* foreign_chrom = chromosomes + LOCAL_SIZE*NUM_NODES + glob_id;
+
+    uint tmp_val;
+    #define SWAP(x, y) tmp_val=x; x=y; y=tmp_val;
+
+    int ii;
+    for(ii = 0; ii < NUM_NODES; ii++)
+    {
+        SWAP(local_chrom[ii], foreign_chrom[ii]);
     }
 }
 

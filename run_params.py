@@ -35,8 +35,6 @@ class RunInfo(object):
             raise RuntimeError("Cannot handle more than one depot")
         setattr(self, "depot", int(depot[0]))
 
-        print json.dumps(self.args, indent=1)
-
         node_coords = read_block("NODE_COORD_SECTION", "DEMAND_SECTION")
         demand = read_block("DEMAND_SECTION", "DEPOT_SECTION")
         setattr(self, "node_info", np.vstack((node_coords.T, demand[:,1])).T)
@@ -45,7 +43,6 @@ class RunInfo(object):
         parser = InputParser(description)
         self._parsed = parser.parse_args()
         # already parsed, but always in a list, so just remove it here so its easier to read
-        self.args = {}
         for i in self._parsed.__dict__:
             try:
                 if len(self._parsed.__dict__[i]) > 1:
@@ -59,7 +56,7 @@ class RunInfo(object):
         self.total_chromosomes = self.pop_size*self.num_populations
 
         if self.verbose:
-            print self.args
+            print self._parsed
 
         self.parseProblem()
 
@@ -104,6 +101,13 @@ class InputParser(argparse.ArgumentParser):
                           type=int,
                           help="""Capacity in each truck which will cause it to go
                             back to the depot""",
+                          action='store')
+
+        self.add_argument("--exchange_strategy",
+                          nargs=1,
+                          default=["ALL_TO_ALL"],
+                          choices=["ALL_TO_ALL", "ELITE_ISLAND", "NONE"],
+                          help="""Selection strategy""",
                           action='store')
 
         self.add_argument("--select_strategy",
@@ -184,11 +188,8 @@ class InputParser(argparse.ArgumentParser):
                           help="""Which OpenCL device to use""",
                           action='store')
 
-        self.set_defaults(ocl_profiling=False)
-        self.set_defaults(verbose=False)
-
         self.add_argument("--ocl_profiling",
-                          dest='verbose',
+                          dest='ocl_profiling',
                           help="""Enable OpenCL profiling info""",
                           action='store_true')
 
@@ -196,4 +197,7 @@ class InputParser(argparse.ArgumentParser):
                           dest='verbose',
                           help="""Print out verbose info""",
                           action='store_true')
+
+        self.set_defaults(ocl_profiling=False)
+        self.set_defaults(verbose=False)
 

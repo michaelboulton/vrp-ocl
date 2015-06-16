@@ -8,7 +8,7 @@ import numpy as np
 import itertools
 mf = cl.mem_flags
 
-from src.run_params import RunInfo
+from run_params import RunInfo
 
 import matplotlib.pyplot as plt
 
@@ -41,7 +41,6 @@ def gen_route_cws(node_coords):
     return route[:, 0] - 1
 
 class OCLRun(object):
-
     def timeKnl(self, kernel, *args, **kwargs):
         """ launch a kernel and see how long it took if profiling is on """
 
@@ -79,6 +78,14 @@ class OCLRun(object):
             self.results_buf,
             self.node_coords_buf,
             self.route_starts_buf)
+
+    def eSort(self):
+        self.timeKnl(self.program.ParallelBitonic_Elitist,
+            self.queue, 2*self.global_size, 2*self.local_size,
+            self.results_buf,
+            self.parents_buf,
+            self.children_buf,
+            self.sorted_buf)
 
     def neSort(self, which_array):
         self.timeKnl(self.program.ParallelBitonic_NonElitist,
@@ -120,8 +127,16 @@ class OCLRun(object):
             self.parents_buf,
             self.rand_state_buf)
 
+    def eliteExchange(self):
+        launch_sz = np.array((self.run_info.num_populations,))
+        self.timeKnl(self.program.eliteExchange,
+            self.queue, launch_sz, launch_sz,
+            self.parents_buf,
+            self.rand_state_buf)
+
     def run(self):
         # XXX debugging - print out the value of a device array
+        print "Starting"
         def cw(name, idx=None, size=None):
             if None == size:
                 tmp = np.zeros([self.levels])
@@ -133,8 +148,8 @@ class OCLRun(object):
             else:
                 return tmp[idx]
 
-        self.global_size = self.run_info.total_chromosomes,
-        self.local_size = self.run_info.pop_size,
+        self.global_size = np.array((self.run_info.total_chromosomes,))
+        self.local_size = np.array((self.run_info.pop_size,))
 
         self.findRouteStarts(self.parents_buf)
         self.TSPSolve(self.parents_buf)
@@ -143,7 +158,11 @@ class OCLRun(object):
         self.copyBack()
 
         for i in xrange(self.run_info.num_iterations):
-            self.foreignExchange()
+            if self.run_info.exchange_strategy == "ALL_TO_ALL":
+                self.foreignExchange()
+            elif self.run_info.exchange_strategy == "ELITE_ISLAND":
+                self.eliteExchange()
+
             self.crossover()
             self.mutate()
 
@@ -153,7 +172,13 @@ class OCLRun(object):
                 self.TSPSolve(self.children_buf)
 
             self.calcFitness(self.children_buf)
-            self.neSort(self.children_buf)
+
+            if self.run_info.select_strategy == "NON_ELITIST":
+                self.neSort(self.children_buf)
+            else:
+                self.findRouteStarts(self.parents_buf)
+                self.calcFitness(self.parents_buf)
+                self.eSort()
 
             self.copyBack()
 
@@ -192,6 +217,8 @@ class OCLRun(object):
 
         random_routes = lots_of_routes.astype(np.uint32)
 
+        print "Generating initial routes..."
+
         from multiprocessing import Pool
         mpool = Pool()
         better_routes = mpool.imap_unordered(gen_route_cws,
@@ -199,6 +226,8 @@ class OCLRun(object):
             self.run_info.total_chromosomes), chunksize=10)
         mpool.close()
         mpool.join()
+
+        print "Done"
 
         return np.hstack(better_routes)
 
@@ -246,7 +275,7 @@ class OCLRun(object):
         options += "-D MAX_CAPACITY={0:d} ".format(self.run_info.capacity)
         options += "-D MIN_CAPACITY={0:d} ".format(self.run_info.min_capacity)
         options += "-D LOCAL_SIZE={0:d} ".format(self.run_info.pop_size)
-        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes*self.run_info.dimension)
+        options += "-D GLOBAL_SIZE={0:d} ".format(self.run_info.total_chromosomes)
         options += "-D DEPOT_NODE={0:d} ".format(self.run_info.depot)
         options += "-D ARENA_SIZE={0:d} ".format(self.run_info.arena_size)
         options += "-D MUT_RATE={0:d} ".format(self.run_info.mutation_rate)
@@ -262,7 +291,7 @@ class OCLRun(object):
         print "options = {0:s}".format(options)
         print "Building..."
 
-        with open("src/knl.cl", "r") as kernel_src:
+        with open("knl.cl", "r") as kernel_src:
             self.program = cl.Program(self.context, kernel_src.read())
 
         self.program.build(options, devices=[self.device])
