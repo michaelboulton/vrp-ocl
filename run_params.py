@@ -71,14 +71,14 @@ class InputParser(argparse.ArgumentParser):
             )
 
         # location of input files for _volcanoes.txt etc
-        self.add_argument("--input_file",
+        self.add_argument("--input-file",
                           nargs=1,
                           default=["problems/fruitybun-data.vrp"],
                           help="""Input file in VRP format""",
                           action='store')
 
         # choose month
-        self.add_argument("--arena_size",
+        self.add_argument("--arena-size",
                           nargs=1,
                           default=[4],
                           metavar="N",
@@ -87,14 +87,14 @@ class InputParser(argparse.ArgumentParser):
                               chosen at random""",
                           action='store')
 
-        self.add_argument("--breed_strategy",
+        self.add_argument("--breed-strategy",
                           nargs=1,
                           default=["CX"],
                           choices=["CX", "PMX", "O1"],
                           help="""Breeding strategy""",
                           action='store')
 
-        self.add_argument("--min_capacity",
+        self.add_argument("--min-capacity",
                           nargs=1,
                           default=[0],
                           metavar="N",
@@ -103,21 +103,21 @@ class InputParser(argparse.ArgumentParser):
                             back to the depot""",
                           action='store')
 
-        self.add_argument("--exchange_strategy",
+        self.add_argument("--exchange-strategy",
                           nargs=1,
                           default=["ALL_TO_ALL"],
                           choices=["ALL_TO_ALL", "ELITE_ISLAND", "NONE"],
                           help="""Selection strategy""",
                           action='store')
 
-        self.add_argument("--select_strategy",
+        self.add_argument("--select-strategy",
                           nargs=1,
                           default=["ELITIST"],
                           choices=["ELITIST", "NON_ELITIST"],
                           help="""Selection strategy""",
                           action='store')
 
-        self.add_argument("--pop_size",
+        self.add_argument("--pop-size",
                           nargs=1,
                           default=[128],
                           metavar="N",
@@ -125,7 +125,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Size of each population""",
                           action='store')
 
-        self.add_argument("--num_populations",
+        self.add_argument("--num-populations",
                           nargs=1,
                           default=[4],
                           metavar="N",
@@ -133,7 +133,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Number of populations""",
                           action='store')
 
-        self.add_argument("--num_iterations",
+        self.add_argument("--num-iterations",
                           nargs=1,
                           default=[100],
                           metavar="N",
@@ -141,7 +141,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Number of generations of genetic algorithm""",
                           action='store')
 
-        self.add_argument("--tsp_solve_frequency",
+        self.add_argument("--tsp-solve-frequency",
                           nargs=1,
                           default=[10],
                           type=int,
@@ -149,14 +149,14 @@ class InputParser(argparse.ArgumentParser):
                             0 disables TSP solving for entire run.""",
                           action='store')
 
-        self.add_argument("--mutation_strategy",
+        self.add_argument("--mutation-strategy",
                           nargs=1,
                           default=["SWAP"],
                           choices=["SWAP", "SLIDE", "REVERSE"],
                           help="""What kind of mutation strategy to use""",
                           action='store')
 
-        self.add_argument("--num_trucks",
+        self.add_argument("--num-trucks",
                           nargs=1,
                           default=[13],
                           type=int,
@@ -164,7 +164,7 @@ class InputParser(argparse.ArgumentParser):
                             possible in one route""",
                           action='store')
 
-        self.add_argument("--mutation_rate",
+        self.add_argument("--mutation-rate",
                           nargs=1,
                           default=[1],
                           type=int,
@@ -172,7 +172,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Rate at which to mutate chromosomes""",
                           action='store')
 
-        self.add_argument("--stops_per_route",
+        self.add_argument("--stops-per-route",
                           nargs=1,
                           default=[16],
                           type=int,
@@ -180,7 +180,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Stops per reout before going back to depot""",
                           action='store')
 
-        self.add_argument("--ocl_device",
+        self.add_argument("--ocl-device",
                           nargs=1,
                           default=[0],
                           type=int,
@@ -188,7 +188,7 @@ class InputParser(argparse.ArgumentParser):
                           help="""Which OpenCL device to use""",
                           action='store')
 
-        self.add_argument("--ocl_profiling",
+        self.add_argument("--ocl-profiling",
                           dest='ocl_profiling',
                           help="""Enable OpenCL profiling info""",
                           action='store_true')
