@@ -4,7 +4,7 @@ Follow on of some coursework I did to solve the Capacitated Vehicle routing Prob
 
 ### Parameters
 
-The different parameters such as mutation rate can be controlled through command line flags, do ./vrp-ocl -h to see what they do.
+The different parameters such as mutation rate can be controlled through command line flags, do ./vrp-ocl.py -h to see what they do.
 
 * Crossover - Different types of crossover can be specified - Order 1 (O1), Cyclic (CX), or PMX. A good explanation of them is [here](http://www.rubicite.com/Tutorials/GeneticAlgorithms/CrossoverOperators/Order1CrossoverOperator.aspx).
 
@@ -28,6 +28,4 @@ There are other parameters but these ones make the most difference
 * Stop it getting stuck in a local minimum
 * Add edge recombination crossover
 * Optimisation
-
-It would also probably be better to redo all of the host side code in Python and use PyOpenCL because a lot of this stuff is more stuied to a scripting language, and it would be easier to add parsing for different kinds of graph layouts
 
