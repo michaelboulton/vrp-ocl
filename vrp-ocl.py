@@ -303,7 +303,7 @@ class OCLRun(object):
             total = sum(self.kernel_times.values())
             print "Total kernel time {0:2.2f} secs".format(total)
             for k,v in self.kernel_times.items():
-                print "{0} - {1:2.2f} secs ({2:2.2f}%)".format(k, v, v/total*100)
+                print "{0} - {1:2.2f} secs ({2:2.2%})".format(k, v, v/total)
 
     def initOCL(self):
         platforms = cl.get_platforms()
